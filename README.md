@@ -16,8 +16,8 @@ A few personal touches for your Claude Code terminal:
 ## Install
 
 ```bash
-git clone https://github.com/<you>/claude-code-fun-config.git
-cd claude-code-fun-config
+git clone https://github.com/Pouetpouets/my-claudecode-terminal-setup.git
+cd my-claudecode-terminal-setup
 ./install.sh
 ```
 
