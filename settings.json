@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "case \"$OSTYPE\" in darwin*) case $((RANDOM % 6)) in 0) C='{8000, 14000, 22000}' ;; 1) C='{6000, 16000, 18000}' ;; 2) C='{8000, 18000, 11000}' ;; 3) C='{16000, 10000, 22000}' ;; 4) C='{22000, 9000, 12000}' ;; 5) C='{22000, 15000, 7000}' ;; esac; osascript -e \"tell application \\\"Terminal\\\" to set background color of selected tab of front window to $C\" >/dev/null 2>&1 || true ;; esac"
+            "command": "case \"$OSTYPE\" in darwin*) bash \"$HOME/.claude/terminal-session-color.sh\" >/dev/null 2>&1 || true ;; esac"
           }
         ]
       }

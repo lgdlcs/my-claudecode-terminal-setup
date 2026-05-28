@@ -20,8 +20,8 @@ fi
 
 mkdir -p "$CLAUDE_DIR"
 
-# --- Python scripts ---
-for f in statusline.py usage-refresh.py; do
+# --- Scripts (Python statuslines + macOS session-color hook) ---
+for f in statusline.py usage-refresh.py terminal-session-color.sh; do
   if [[ -f "$CLAUDE_DIR/$f" ]]; then
     cp "$CLAUDE_DIR/$f" "$CLAUDE_DIR/$f.bak.$TS"
     echo "Backed up: $f -> $f.bak.$TS"
