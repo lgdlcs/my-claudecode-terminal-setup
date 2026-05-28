@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Install the fun config into ~/.claude/
-# - Backs up any existing settings.json / statusline.sh with a timestamp
-# - Merges new settings into your existing settings.json (top-level keys win)
-# - Drops the cross-platform statusline.sh and makes it executable
+# Install the fun config into ~/.claude/  (macOS / Linux / Git Bash / WSL)
+# - Drops the cross-platform Python scripts and makes them executable
+# - Merges settings.json (repo wins on conflicts, your machine-specific keys kept)
+# Requires: python3 (no jq needed anymore).
 
 set -e
 
@@ -10,55 +10,29 @@ CLAUDE_DIR="$HOME/.claude"
 REPO_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 TS=$(date +%Y%m%d-%H%M%S)
 
-if ! command -v jq >/dev/null 2>&1; then
-  echo "ERROR: 'jq' is required but not installed."
-  echo "  macOS:       brew install jq"
-  echo "  Git Bash:    scoop install jq    (or: choco install jq)"
-  echo "  Debian/WSL:  sudo apt install jq"
+# Pick a python launcher.
+if command -v python3 >/dev/null 2>&1; then PY=python3
+elif command -v python >/dev/null 2>&1; then PY=python
+else
+  echo "ERROR: Python 3 is required but not found (install python3)."
   exit 1
 fi
 
 mkdir -p "$CLAUDE_DIR"
 
-# --- statusline.sh ---
-if [[ -f "$CLAUDE_DIR/statusline.sh" ]]; then
-  cp "$CLAUDE_DIR/statusline.sh" "$CLAUDE_DIR/statusline.sh.bak.$TS"
-  echo "Backed up: statusline.sh → statusline.sh.bak.$TS"
-fi
-cp "$REPO_DIR/statusline.sh" "$CLAUDE_DIR/statusline.sh"
-chmod +x "$CLAUDE_DIR/statusline.sh"
-echo "Installed: $CLAUDE_DIR/statusline.sh"
+# --- Python scripts ---
+for f in statusline.py usage-refresh.py; do
+  if [[ -f "$CLAUDE_DIR/$f" ]]; then
+    cp "$CLAUDE_DIR/$f" "$CLAUDE_DIR/$f.bak.$TS"
+    echo "Backed up: $f -> $f.bak.$TS"
+  fi
+  cp "$REPO_DIR/$f" "$CLAUDE_DIR/$f"
+  chmod +x "$CLAUDE_DIR/$f"
+  echo "Installed: $CLAUDE_DIR/$f"
+done
 
-# --- usage-refresh.sh (cache du quota de forfait affiché dans la statusline) ---
-if [[ -f "$CLAUDE_DIR/usage-refresh.sh" ]]; then
-  cp "$CLAUDE_DIR/usage-refresh.sh" "$CLAUDE_DIR/usage-refresh.sh.bak.$TS"
-  echo "Backed up: usage-refresh.sh → usage-refresh.sh.bak.$TS"
-fi
-cp "$REPO_DIR/usage-refresh.sh" "$CLAUDE_DIR/usage-refresh.sh"
-chmod +x "$CLAUDE_DIR/usage-refresh.sh"
-echo "Installed: $CLAUDE_DIR/usage-refresh.sh"
-
-# --- settings.json ---
-if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
-  cp "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/settings.json.bak.$TS"
-  echo "Backed up: settings.json → settings.json.bak.$TS"
-  # Recursive merge: new file wins on conflicts (incl. hooks)
-  jq -s '.[0] * .[1]' "$CLAUDE_DIR/settings.json.bak.$TS" "$REPO_DIR/settings.json" > "$CLAUDE_DIR/settings.json.tmp"
-  mv "$CLAUDE_DIR/settings.json.tmp" "$CLAUDE_DIR/settings.json"
-  echo "Merged:    $CLAUDE_DIR/settings.json"
-else
-  cp "$REPO_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-  echo "Installed: $CLAUDE_DIR/settings.json"
-fi
-
-# --- validate ---
-if jq -e . "$CLAUDE_DIR/settings.json" >/dev/null 2>&1; then
-  echo "OK: settings.json parses cleanly."
-else
-  echo "ERROR: resulting settings.json is invalid! Restore with:"
-  echo "  cp $CLAUDE_DIR/settings.json.bak.$TS $CLAUDE_DIR/settings.json"
-  exit 1
-fi
+# --- settings.json (recursive merge + OS-specific statusline command) ---
+"$PY" "$REPO_DIR/apply-settings.py" "$PY"
 
 echo ""
 echo "Done. Open a new Claude Code session to see the changes."
