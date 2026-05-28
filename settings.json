@@ -1,4 +1,7 @@
 {
+  "model": "opus",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
   "spinnerVerbs": {
     "mode": "append",
     "verbs": [

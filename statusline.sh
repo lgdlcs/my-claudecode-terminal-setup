@@ -21,6 +21,18 @@ if [[ -n "$TRANSCRIPT" && -f "$TRANSCRIPT" ]]; then
     PCT=$((TOKENS * 100 / 200000))
     CTX="  ·  ${PCT}% ctx"
   fi
+  if [[ -n "$TOKENS" && "$TOKENS" != "null" && "$TOKENS" -gt 0 ]]; then
+    PCT=$((TOKENS * 100 / 200000))
+    if   (( PCT < 40 )); then EMOJI="🧠"; LABEL="chill";    COLOR="\033[32m"          # vert
+    elif (( PCT < 70 )); then EMOJI="🤔"; LABEL="thinking"; COLOR="\033[33m"          # jaune
+    elif (( PCT < 90 )); then EMOJI="🥵"; LABEL="hot";      COLOR="\033[38;5;208m"    # orange
+    else                      EMOJI="🤯"; LABEL="melting";  COLOR="\033[31m"          # rouge
+    fi
+    CTX=$(printf "  ·  %s ${COLOR}%d%% %s\033[0m" "$EMOJI" "$PCT" "$LABEL")
+  fi
 fi
 
 printf "\033[38;5;208m✳ %s\033[0m  ·  %s  ·  %s%s" "$MODEL" "$DIR_SHORT" "$TIME" "$CTX"
+
+
+
