@@ -29,6 +29,15 @@ cp "$REPO_DIR/statusline.sh" "$CLAUDE_DIR/statusline.sh"
 chmod +x "$CLAUDE_DIR/statusline.sh"
 echo "Installed: $CLAUDE_DIR/statusline.sh"
 
+# --- usage-refresh.sh (cache du quota de forfait affiché dans la statusline) ---
+if [[ -f "$CLAUDE_DIR/usage-refresh.sh" ]]; then
+  cp "$CLAUDE_DIR/usage-refresh.sh" "$CLAUDE_DIR/usage-refresh.sh.bak.$TS"
+  echo "Backed up: usage-refresh.sh → usage-refresh.sh.bak.$TS"
+fi
+cp "$REPO_DIR/usage-refresh.sh" "$CLAUDE_DIR/usage-refresh.sh"
+chmod +x "$CLAUDE_DIR/usage-refresh.sh"
+echo "Installed: $CLAUDE_DIR/usage-refresh.sh"
+
 # --- settings.json ---
 if [[ -f "$CLAUDE_DIR/settings.json" ]]; then
   cp "$CLAUDE_DIR/settings.json" "$CLAUDE_DIR/settings.json.bak.$TS"

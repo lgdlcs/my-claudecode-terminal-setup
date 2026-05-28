@@ -32,7 +32,35 @@ if [[ -n "$TRANSCRIPT" && -f "$TRANSCRIPT" ]]; then
   fi
 fi
 
-printf "\033[38;5;208m✳ %s\033[0m  ·  %s  ·  %s%s" "$MODEL" "$DIR_SHORT" "$TIME" "$CTX"
+# ── Utilisation du forfait (fenêtres 5h / 7j), depuis le cache ──────────────
+USAGE=""
+CACHEF="$HOME/.claude/usage-cache.json"
+TTL=180
+NOWU=$(date +%s)
+FETCHED=0
+if [[ -f "$CACHEF" ]]; then
+  read -r H5U H5R FETCHED < <(jq -r '"\(.h5_util) \(.h5_reset) \(.fetched_at)"' "$CACHEF" 2>/dev/null)
+  if [[ -n "$H5U" && "$H5U" != "null" ]]; then
+    PCT5=$(awk -v u="$H5U" 'BEGIN{printf "%d", u*100+0.5}')
+    REM=$(( H5R - NOWU ))
+    if (( REM > 0 )); then CD=$(printf "%dh%02d" $((REM/3600)) $(((REM%3600)/60))); else CD="reset!"; fi
+    # mini-jauge 8 segments + emoji/label qui montent en température
+    FILLED=$(awk -v u="$H5U" 'BEGIN{f=int(u*8+0.5); if(f>8)f=8; if(f<0)f=0; print f}')
+    BAR=""; for ((i=0;i<8;i++)); do (( i<FILLED )) && BAR+="▰" || BAR+="▱"; done
+    if   (( PCT5 < 50 )); then UCOL="\033[32m";       UEMO="🚀"; ULAB="cruise"
+    elif (( PCT5 < 75 )); then UCOL="\033[33m";       UEMO="🔥"; ULAB="warm"
+    elif (( PCT5 < 90 )); then UCOL="\033[38;5;208m"; UEMO="🥵"; ULAB="danger"
+    else                       UCOL="\033[31m";       UEMO="🚨"; ULAB="MAX!"
+    fi
+    USAGE=$(printf "  ·  %s ${UCOL}%s %d%% %s\033[0m \033[2m⏳%s\033[0m" "$UEMO" "$BAR" "$PCT5" "$ULAB" "$CD")
+  fi
+fi
+# Rafraîchissement en arrière-plan si cache absent ou périmé (non bloquant).
+if [[ ! -f "$CACHEF" ]] || (( NOWU - FETCHED > TTL )); then
+  nohup "$HOME/.claude/usage-refresh.sh" >/dev/null 2>&1 &
+fi
+
+printf "\033[38;5;208m✳ %s\033[0m  ·  %s  ·  %s%s%s" "$MODEL" "$DIR_SHORT" "$TIME" "$CTX" "$USAGE"
 
 
 
