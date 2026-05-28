@@ -3,7 +3,7 @@
 A few personal touches for your Claude Code terminal:
 
 - **Statusline** at the bottom — model, current dir, time, live **context-window** usage %, and a **plan-usage gauge** (5h window % + time-to-reset, colored 🚀/🔥/🥵/🚨)
-- **Random tab color** at session start — muted dark palette, easy on the eyes (macOS Terminal.app only)
+- **Distinct per-session terminal color** — each concurrent Claude session gets its own muted dark tint, so two windows never share a color (macOS Terminal.app via a `SessionStart` hook; Windows Git Bash via an opt-in `claude` wrapper — see below)
 - **Wordmark + sound** on each turn-end — discreet `✳ Claude Code` + a soft sound when Claude hands back to you
 - **Custom spinner verbs** — `Brewing...`, `Galaxy-braining...`, `Marinating...` mixed with built-ins
 
@@ -38,6 +38,21 @@ Both installers:
 2. Copy the Python scripts into `~/.claude/`
 3. **Merge** the repo settings into yours (recursive; repo wins on conflicts, your machine-specific keys survive) and set the statusline command to the right Python launcher + absolute path for your OS
 
+## Per-session terminal color
+
+Each concurrent Claude session is tinted a different color from a 6-color dark palette, so you can tell two sessions apart at a glance.
+
+- **macOS (Terminal.app)** — automatic, via the `SessionStart` hook in `settings.json`. It targets the tab by its TTY and picks a color not already used by another live session. Nothing to enable.
+- **Windows (Git Bash / mintty / Windows Terminal)** — Claude runs hooks detached from the terminal, so a hook can't emit the color escape. Instead, source the `claude` wrapper, which runs in your live shell and emits `OSC 11`. Add this line to `~/.bashrc`:
+
+  ```bash
+  source ~/.claude/claude-session-color.bash
+  ```
+
+  Then open a new Git Bash window and run `claude` as usual. (Only triggers when launched via the `claude` command; no-ops on non–Git Bash shells.)
+
+State lives in `~/.claude/session-colors/`; dead sessions are pruned automatically. With more than 6 simultaneous sessions, colors are reused round-robin.
+
 ## How the plan-usage gauge works
 
 `usage-refresh.py` makes a tiny (1-token) `/v1/messages` call using your Claude Code OAuth token and reads the `anthropic-ratelimit-unified-*` response headers, caching them in `~/.claude/usage-cache.json`. `statusline.py` renders from that cache and triggers a background refresh when it's older than `TTL` (180 s). The token is read at runtime from `~/.claude/.credentials.json` (with a macOS Keychain fallback) — **no secret is stored in these files**.
@@ -50,7 +65,7 @@ Both installers:
 |----------------|--------------------|--------------------|-------------|
 | Statusline     | yes                | yes (Python)       | yes         |
 | Plan-usage gauge | yes              | yes (if creds file)| yes         |
-| Tab color      | yes (Terminal.app) | skipped            | skipped     |
+| Per-session color | yes (Terminal.app) | yes (Git Bash wrapper) | skipped  |
 | Sound          | `Pop.aiff`         | PowerShell beep    | skipped     |
 | Wordmark       | yes                | yes                | yes         |
 | Spinner verbs  | yes                | yes                | yes         |
