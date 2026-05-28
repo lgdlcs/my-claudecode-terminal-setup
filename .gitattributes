@@ -1,0 +1,8 @@
+# Shell scripts must always use LF, even on Windows, or Git Bash chokes on \r
+*.sh text eol=lf
+
+# JSON config stays LF for consistency
+*.json text eol=lf
+
+# Let Git auto-detect text vs binary for everything else
+* text=auto
