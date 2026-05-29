@@ -6,6 +6,7 @@ A few personal touches for your Claude Code terminal:
 - **Distinct per-session terminal color** — each concurrent Claude session gets its own muted dark tint, so two windows never share a color (macOS Terminal.app via a `SessionStart` hook; Windows Git Bash via an opt-in `claude` wrapper — see below)
 - **Wordmark + sound** on each turn-end — discreet `✳ Claude Code` + a soft sound when Claude hands back to you
 - **Custom spinner verbs** — `Brewing...`, `Galaxy-braining...`, `Marinating...` mixed with built-ins
+- **Frictionless permissions** — all Bash + `gh` commands run without a confirmation prompt (with a `deny` safety net on destructive `rm -rf` / `sudo rm`), plus an optional `claude` shell alias that launches in bypass-permissions mode — see below
 
 The statusline is **Python** (`statusline.py` + `usage-refresh.py`), so it runs the same on macOS, Linux and **Windows native** (PowerShell/cmd) — no bash or jq required at runtime.
 
@@ -52,6 +53,19 @@ Each concurrent Claude session is tinted a different color from a 6-color dark p
   Then open a new Git Bash window and run `claude` as usual. (Only triggers when launched via the `claude` command; no-ops on non–Git Bash shells.)
 
 State lives in `~/.claude/session-colors/`; dead sessions are pruned automatically. With more than 6 simultaneous sessions, colors are reused round-robin.
+
+## Permissions & bypass alias
+
+Two layers, so day-to-day use needs no confirmation clicks:
+
+1. **`permissions` in `settings.json`** — `allow` covers all `Bash` (and `gh`) so commands run without a prompt, while `deny` still blocks destructive `rm -rf /`, `rm -rf ~`, and `sudo rm`. This is the **safe** default and the `deny` net is honored whenever you're *not* in bypass mode.
+2. **`claude` shell alias** (macOS/Linux, added by `install.sh` to `~/.zshrc`) — runs `claude --dangerously-skip-permissions` so every session starts with no prompts at all. The alias is only added if no `alias claude=` already exists.
+
+   ```bash
+   alias claude='claude --dangerously-skip-permissions'
+   ```
+
+   ⚠️ Bypass mode ignores **all** permission rules, including the `deny` net above. To launch *without* the flag for one run, use `\claude` (or `command claude`).
 
 ## How the plan-usage gauge works
 

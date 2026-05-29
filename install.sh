@@ -34,5 +34,18 @@ done
 # --- settings.json (recursive merge + OS-specific statusline command) ---
 "$PY" "$REPO_DIR/apply-settings.py" "$PY"
 
+# --- shell alias: launch Claude Code in bypass-permissions mode by default ---
+# Idempotent: only added if not already present. Use `\claude` to bypass the alias.
+RC="$HOME/.zshrc"
+if [[ -f "$RC" ]] && ! grep -q "alias claude=" "$RC" 2>/dev/null; then
+  {
+    echo ""
+    echo "# Lance Claude Code en mode bypass permissions par défaut."
+    echo "# Pour lancer sans le flag ponctuellement : \\claude  (ou: command claude)"
+    echo "alias claude='claude --dangerously-skip-permissions'"
+  } >> "$RC"
+  echo "Installed: alias claude -> $RC"
+fi
+
 echo ""
 echo "Done. Open a new Claude Code session to see the changes."

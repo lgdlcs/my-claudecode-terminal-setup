@@ -2,6 +2,17 @@
   "model": "opus",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Bash(gh *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(sudo rm *)"
+    ]
+  },
   "spinnerVerbs": {
     "mode": "append",
     "verbs": [
