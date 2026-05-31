@@ -31,6 +31,14 @@ for f in statusline.py usage-refresh.py terminal-session-color.sh claude-session
   echo "Installed: $CLAUDE_DIR/$f"
 done
 
+# --- CLAUDE.md (global instructions; backed up, not chmod'd) ---
+if [[ -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
+  cp "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.$TS"
+  echo "Backed up: CLAUDE.md -> CLAUDE.md.bak.$TS"
+fi
+cp "$REPO_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+echo "Installed: $CLAUDE_DIR/CLAUDE.md"
+
 # --- settings.json (recursive merge + OS-specific statusline command) ---
 "$PY" "$REPO_DIR/apply-settings.py" "$PY"
 
