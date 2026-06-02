@@ -13,3 +13,8 @@
 ## Tests
 - Toujours utiliser Playwright dès que Claude peut exécuter un test lui-même (UI/web, vérification de comportement dans un navigateur).
 - Si Playwright n'est pas connecté/installé, suggérer son installation plutôt que de renoncer au test.
+
+## Emails (Gmail)
+- Ne jamais coller une URL brute dans un email envoyé via Gmail.
+- Toujours embarquer le lien dans un texte d'ancrage (lien hypertexte HTML), ex. `<a href="https://…">votre maquette</a>` pour « votre maquette ».
+- Envoyer ces emails en HTML (et non en texte brut) pour que le lien cliquable soit rendu correctement.
