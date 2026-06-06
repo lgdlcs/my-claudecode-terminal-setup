@@ -14,6 +14,10 @@
 - Toujours utiliser Playwright dès que Claude peut exécuter un test lui-même (UI/web, vérification de comportement dans un navigateur).
 - Si Playwright n'est pas connecté/installé, suggérer son installation plutôt que de renoncer au test.
 
+## TODO
+- Quand je parle de « TODO » (ma liste de tâches), il s'agit de la liste Notion **ATL TAB STUDIO** : https://app.notion.com/p/ATL-TAB-STUDIO-376e001a7211806da98ded9ac3fb78c4
+- Utiliser le MCP Notion pour lire/mettre à jour cette liste quand je demande d'ajouter, consulter ou cocher des tâches.
+
 ## Emails (Gmail)
 - Ne jamais coller une URL brute dans un email envoyé via Gmail.
 - Toujours embarquer le lien dans un texte d'ancrage (lien hypertexte HTML), ex. `<a href="https://…">votre maquette</a>` pour « votre maquette ».
