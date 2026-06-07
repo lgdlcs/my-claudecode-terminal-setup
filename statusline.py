@@ -9,8 +9,11 @@ rafraîchi en arrière-plan par usage-refresh.py quand le cache est périmé.
 """
 import sys
 import os
+import re
 import json
 import time
+import hashlib
+import tempfile
 import subprocess
 from pathlib import Path
 
@@ -18,10 +21,17 @@ CLAUDE_DIR = Path.home() / ".claude"
 CACHE = CLAUDE_DIR / "usage-cache.json"
 CTX_WINDOW = 200_000
 TTL = 180  # secondes avant rafraîchissement du cache quota
+PROJ_TTL = 30  # secondes de cache pour la résolution git du projet
+TMP = Path(tempfile.gettempdir())
 
 RESET = "\033[0m"
 DIM = "\033[2m"
+CYAN = "\033[36m"
 ORANGE = "\033[38;5;208m"
+
+# Outils du transcript qui « touchent » un fichier
+EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
+READ_TOOLS = ("Read",)
 
 
 def read_input():
@@ -75,6 +85,134 @@ def last_usage_tokens(path):
                 + (usage.get("cache_creation_input_tokens") or 0)
             )
     return 0
+
+
+def last_worked_file(path):
+    """Retourne le dernier fichier travaillé : modifié (Edit/Write/...) en priorité,
+    sinon le dernier fichier lu (Read). None si rien."""
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+    except Exception:
+        return None
+    fallback_read = None
+    for line in reversed(lines):
+        line = line.strip()
+        if not line or '"tool_use"' not in line or '"file_path"' not in line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        msg = obj.get("message")
+        content = msg.get("content") if isinstance(msg, dict) else None
+        if not isinstance(content, list):
+            continue
+        for b in content:
+            if not isinstance(b, dict) or b.get("type") != "tool_use":
+                continue
+            name = b.get("name")
+            fp = (b.get("input") or {}).get("file_path")
+            if not fp:
+                continue
+            if name in EDIT_TOOLS:
+                return fp  # priorité absolue : on s'arrête au 1er modifié
+            if name in READ_TOOLS and fallback_read is None:
+                fallback_read = fp
+    return fallback_read
+
+
+def _git(args, cwd):
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", cwd] + args,
+            stderr=subprocess.DEVNULL, text=True, timeout=2,
+        )
+        return out.strip()
+    except Exception:
+        return ""
+
+
+def remote_to_https(url):
+    """Convertit une URL git (SSH ou HTTPS) en URL web https, sans .git."""
+    if not url:
+        return ""
+    url = url.strip()
+    # git@host:owner/repo(.git)  ->  https://host/owner/repo
+    m = re.match(r"^[\w.-]+@([\w.-]+):(.+)$", url)
+    if m:
+        url = "https://{}/{}".format(m.group(1), m.group(2))
+    url = re.sub(r"^ssh://git@", "https://", url)
+    url = re.sub(r"\.git$", "", url)
+    return url
+
+
+def project_link(file_path):
+    """Résout (texte, lien) pour le projet du fichier. Caché ~PROJ_TTL secondes.
+    lien priorité : URL remote https -> file://racine -> file://dossier."""
+    d = os.path.dirname(file_path) or "."
+    key = hashlib.md5(d.encode("utf-8", "replace")).hexdigest()[:16]
+    cache_file = TMP / f"statusline-proj-{key}"
+    now = time.time()
+    cached = None
+    try:
+        if cache_file.is_file() and now - cache_file.stat().st_mtime < PROJ_TTL:
+            cached = json.loads(cache_file.read_text(encoding="utf-8"))
+    except Exception:
+        cached = None
+    if cached is None:
+        root = _git(["rev-parse", "--show-toplevel"], d)
+        remote = remote_to_https(_git(["remote", "get-url", "origin"], d))
+        cached = {"root": root, "remote": remote}
+        try:
+            cache_file.write_text(json.dumps(cached), encoding="utf-8")
+        except Exception:
+            pass
+    root = cached.get("root") or ""
+    remote = cached.get("remote") or ""
+
+    # Texte = chemin relatif à la racine du repo, sinon parent/fichier
+    if root and file_path.startswith(root):
+        text = file_path[len(root):].lstrip("/\\") or os.path.basename(file_path)
+    else:
+        parent = os.path.basename(os.path.dirname(file_path))
+        text = os.path.join(parent, os.path.basename(file_path)) if parent else os.path.basename(file_path)
+
+    if remote:
+        link = remote
+    elif root:
+        link = "file://" + root
+    else:
+        link = "file://" + d
+    return text, link
+
+
+def truncate_path(text, max_len):
+    if max_len <= 0 or len(text) <= max_len:
+        return text
+    base = os.path.basename(text)
+    if len(base) + 2 >= max_len:
+        return "…" + base[-(max_len - 1):]
+    return "…/" + text[-(max_len - 2):]
+
+
+def file_segment(transcript):
+    fp = last_worked_file(transcript)
+    if not fp:
+        return ""
+    text, link = project_link(fp)
+    try:
+        cols = int(os.environ.get("COLUMNS", "0"))
+    except ValueError:
+        cols = 0
+    if cols > 40:
+        text = truncate_path(text, max(12, cols // 3))
+    # OSC 8 : \033]8;;URL\033\\  TEXTE  \033]8;;\033\\
+    osc_open = f"\033]8;;{link}\033\\"
+    osc_close = "\033]8;;\033\\"
+    return f"  ·  {osc_open}{CYAN}📄 {text}{RESET}{osc_close}"
 
 
 def usage_segment():
@@ -144,11 +282,13 @@ def main():
         cwd = "~" + cwd[len(home):]
     dir_short = os.path.basename(cwd.rstrip("/\\")) or cwd or "~"
 
+    transcript = data.get("transcript_path") or ""
     tstr = time.strftime("%H:%M", time.localtime())
-    ctx = context_segment(data.get("transcript_path") or "")
+    fileseg = file_segment(transcript)
+    ctx = context_segment(transcript)
     usage = usage_segment()
 
-    sys.stdout.write(f"{ORANGE}✳ {model_name}{RESET}  ·  {dir_short}  ·  {tstr}{ctx}{usage}")
+    sys.stdout.write(f"{ORANGE}✳ {model_name}{RESET}  ·  {dir_short}{fileseg}  ·  {tstr}{ctx}{usage}")
 
 
 if __name__ == "__main__":
