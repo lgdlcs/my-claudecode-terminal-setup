@@ -22,3 +22,7 @@
 - Ne jamais coller une URL brute dans un email envoyé via Gmail.
 - Toujours embarquer le lien dans un texte d'ancrage (lien hypertexte HTML), ex. `<a href="https://…">votre maquette</a>` pour « votre maquette ».
 - Envoyer ces emails en HTML (et non en texte brut) pour que le lien cliquable soit rendu correctement.
+
+## gstack
+- Pour toute navigation web, utiliser le skill `/browse` de gstack. Ne jamais utiliser les outils `mcp__claude-in-chrome__*`.
+- Skills gstack disponibles : `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/setup-gbrain`, `/retro`, `/investigate`, `/document-release`, `/document-generate`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.
