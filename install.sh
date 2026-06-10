@@ -31,6 +31,22 @@ for f in statusline.py usage-refresh.py terminal-session-color.sh claude-session
   echo "Installed: $CLAUDE_DIR/$f"
 done
 
+# --- Slash commands (~/.claude/commands/) ---
+mkdir -p "$CLAUDE_DIR/commands"
+for f in "$REPO_DIR"/commands/*.md; do
+  cp "$f" "$CLAUDE_DIR/commands/"
+  echo "Installed: $CLAUDE_DIR/commands/$(basename "$f")"
+done
+
+# --- AppleScripts (macOS only; used by /terminaux) ---
+if [[ "$(uname)" == "Darwin" && -d "$REPO_DIR/scripts" ]]; then
+  mkdir -p "$HOME/Library/Scripts"
+  for f in "$REPO_DIR"/scripts/*.applescript; do
+    cp "$f" "$HOME/Library/Scripts/"
+    echo "Installed: $HOME/Library/Scripts/$(basename "$f")"
+  done
+fi
+
 # --- CLAUDE.md (global instructions; backed up, not chmod'd) ---
 if [[ -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
   cp "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.$TS"
