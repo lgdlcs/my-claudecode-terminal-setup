@@ -54,6 +54,15 @@ Each concurrent Claude session is tinted a different color from a 6-color dark p
 
 State lives in `~/.claude/session-colors/`; dead sessions are pruned automatically. With more than 6 simultaneous sessions, colors are reused round-robin.
 
+## /terminaux — 3 Claude sessions side by side
+
+The `/terminaux` slash command opens and arranges 3 terminal windows in thirds of the screen (left/center/right column), each running `claude`.
+
+- **macOS** — `~/Library/Scripts/arrange-3-terminals.applescript` (Terminal.app): reuses existing windows, opens the missing ones, then launches `claude` in every idle window (windows already running a process are left untouched).
+- **Windows** — `~/.claude/scripts/arrange-3-terminals.ps1`: opens 3 new windows (Windows Terminal if available, plain PowerShell otherwise), tiles them in thirds and launches `claude` in each. Always opens new windows, since injecting a command into an existing window could type into a running process.
+
+> Contributing rule: any new command or config pushed to this repo must ship **both** a macOS and a Windows implementation (installed by `install.sh` and `install.ps1` respectively), or document the gap in the OS support table below.
+
 ## Permissions & bypass alias
 
 Two layers, so day-to-day use needs no confirmation clicks:
@@ -82,6 +91,7 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | Per-session color | yes (Terminal.app) | yes (Git Bash wrapper) | skipped  |
 | Sound          | `Pop.aiff`         | PowerShell beep    | skipped     |
 | Wordmark       | yes                | yes                | yes         |
+| /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
 | Spinner verbs  | yes                | yes                | yes         |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
