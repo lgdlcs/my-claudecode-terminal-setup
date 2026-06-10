@@ -34,6 +34,17 @@
     "padding": 1
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$OSTYPE\" in darwin*) bash \"$HOME/.claude/loop-terminal-hook.sh\" ;; esac",
+            "statusMessage": "Redirection des /loop vers le terminal dédié…"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
