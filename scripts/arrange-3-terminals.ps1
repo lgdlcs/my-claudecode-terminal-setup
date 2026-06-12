@@ -1,10 +1,10 @@
 # Equivalent Windows de arrange-3-terminals.applescript :
-# ouvre 3 fenetres de terminal rangees en trois colonnes (tiers gauche/centre/droit),
-# avec claude lance dans chacune.
+# range 3 fenetres de terminal en trois colonnes (tiers gauche/centre/droit),
+# avec claude lance dans les fenetres nouvellement ouvertes.
 # Utilise Windows Terminal (wt.exe) si present, sinon des fenetres PowerShell (conhost).
-# Difference avec macOS : on ne peut pas injecter une commande dans une fenetre deja
-# ouverte sans risquer de taper dans un process en cours, donc on ouvre toujours
-# 3 nouvelles fenetres.
+# Comme macOS : on n'ouvre que les fenetres manquantes (deficit pour atteindre 3),
+# on range les fenetres existantes au lieu d'en empiler de nouvelles, et on ne lance
+# claude QUE dans les fenetres neuves (jamais dans une fenetre deja occupee par un process).
 
 $ErrorActionPreference = "Stop"
 
@@ -39,33 +39,43 @@ public class TermWin {
 }
 "@
 
-$before = [TermWin]::Terminals()
+# Snapshot des terminaux deja ouverts
+$before = @([TermWin]::Terminals())
 
-$wt = Get-Command wt.exe -ErrorAction SilentlyContinue
-for ($i = 0; $i -lt 3; $i++) {
-    if ($wt) {
-        # "-w new" force une nouvelle fenetre (et non un onglet)
-        Start-Process wt.exe -ArgumentList "-w", "new", "powershell", "-NoExit", "-Command", "claude"
-    } else {
-        Start-Process powershell -ArgumentList "-NoExit", "-Command", "claude"
+# On n'ouvre que ce qui manque pour atteindre 3 fenetres
+$deficit = 3 - $before.Count
+$new = @()
+
+if ($deficit -gt 0) {
+    $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
+    for ($i = 0; $i -lt $deficit; $i++) {
+        if ($wt) {
+            # "-w new" force une nouvelle fenetre (et non un onglet)
+            Start-Process wt.exe -ArgumentList "-w", "new", "powershell", "-NoExit", "-Command", "claude"
+        } else {
+            Start-Process powershell -ArgumentList "-NoExit", "-Command", "claude"
+        }
+    }
+
+    # Attend l'apparition des nouvelles fenetres (10 s max)
+    $deadline = (Get-Date).AddSeconds(10)
+    do {
+        Start-Sleep -Milliseconds 300
+        $new = @([TermWin]::Terminals() | Where-Object { $before -notcontains $_ })
+    } until ($new.Count -ge $deficit -or (Get-Date) -gt $deadline)
+
+    if ($new.Count -lt 1) {
+        Write-Error "Aucune nouvelle fenetre de terminal detectee."
+        exit 1
     }
 }
 
-# Attend l'apparition des 3 nouvelles fenetres (10 s max)
-$deadline = (Get-Date).AddSeconds(10)
-do {
-    Start-Sleep -Milliseconds 300
-    $new = @([TermWin]::Terminals() | Where-Object { $before -notcontains $_ })
-} until ($new.Count -ge 3 -or (Get-Date) -gt $deadline)
-
-if ($new.Count -lt 1) {
-    Write-Error "Aucune nouvelle fenetre de terminal detectee."
-    exit 1
-}
-
+# Range les 3 premieres fenetres (existantes d'abord, puis nouvelles) dans les tiers.
+# Les terminaux au-dela de 3 sont laisses tels quels.
+$all = @($before + $new) | Select-Object -First 3
 $i = 0
-foreach ($h in ($new | Select-Object -First 3)) {
+foreach ($h in $all) {
     [TermWin]::MoveWindow($h, $work.X + $i * $colW, $work.Y, $colW, $work.Height, $true) | Out-Null
     $i++
 }
-Write-Host "OK : $i fenetre(s) rangee(s), claude lance."
+Write-Host "OK : $i fenetre(s) rangee(s), $($new.Count) nouvelle(s) lancee(s)."
