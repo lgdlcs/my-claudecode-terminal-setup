@@ -55,6 +55,16 @@ fi
 cp "$REPO_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
 echo "Installed: $CLAUDE_DIR/CLAUDE.md"
 
+# --- Reference docs (bibles & principes; backed up, not chmod'd) ---
+for f in landing-page-bible.md startup-principles.md; do
+  if [[ -f "$CLAUDE_DIR/$f" ]]; then
+    cp "$CLAUDE_DIR/$f" "$CLAUDE_DIR/$f.bak.$TS"
+    echo "Backed up: $f -> $f.bak.$TS"
+  fi
+  cp "$REPO_DIR/$f" "$CLAUDE_DIR/$f"
+  echo "Installed: $CLAUDE_DIR/$f"
+done
+
 # --- settings.json (recursive merge + OS-specific statusline command) ---
 "$PY" "$REPO_DIR/apply-settings.py" "$PY"
 

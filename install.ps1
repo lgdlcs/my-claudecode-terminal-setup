@@ -60,6 +60,17 @@ if (Test-Path $ClaudeMd) {
 Copy-Item (Join-Path $RepoDir "CLAUDE.md") $ClaudeMd -Force
 Write-Host "Installed: $ClaudeMd"
 
+# --- Reference docs (bibles & principes; backed up) ---
+foreach ($f in @("landing-page-bible.md", "startup-principles.md")) {
+    $dest = Join-Path $ClaudeDir $f
+    if (Test-Path $dest) {
+        Copy-Item $dest "$dest.bak.$Ts"
+        Write-Host "Backed up: $f -> $f.bak.$Ts"
+    }
+    Copy-Item (Join-Path $RepoDir $f) $dest -Force
+    Write-Host "Installed: $dest"
+}
+
 # --- settings.json (recursive merge + Windows statusline command) ---
 & $Py (Join-Path $RepoDir "apply-settings.py") $Py
 
