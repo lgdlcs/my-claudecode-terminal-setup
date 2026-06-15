@@ -31,6 +31,11 @@
 - **Landing pages / produit viral** : dès qu'on conçoit ou révise une landing page (sites vitrines, démos, ComplaintScout, etc.), appliquer la bible `~/.claude/landing-page-bible.md` (32 Principles of a Viral Product, Marc Lou). En cas de conflit, la règle gagne sauf arbitrage explicite.
 - **Business / SaaS / monétisation** : dès qu'on entame un sujet business, SaaS ou monétisation, raisonner avec `~/.claude/startup-principles.md` (15 règles fondateur, Y Combinator).
 
+## Reminders / rappels
+- Tous les reminders (relances prospects, suivis, tâches datées différées, etc.) se créent via **Google Calendar** (MCP `mcp__claude_ai_Google_Calendar__create_event`), pas en local ni en launchd.
+- Mettre l'événement au fuseau `Europe/Paris`, avec un rappel popup le jour J + un rappel email la veille.
+- Inclure dans la description : le contexte, la liste concernée (ex. prospects à relancer avec email/tél/site/maquette) et **la commande Claude Code à copier-coller** pour exécuter l'action le jour venu.
+
 ## Repo my-claudecode-terminal-setup (config Claude Code)
 - Le repo GitHub `lgdlcs/my-claudecode-terminal-setup` est **multi-plateforme** (macOS + Windows).
 - Toute nouvelle config, commande ou script poussé dans ce repo doit être **adapté aux deux environnements** : version macOS (bash/AppleScript) **et** version Windows (PowerShell), chacune installée par son installeur (`install.sh` et `install.ps1`).
