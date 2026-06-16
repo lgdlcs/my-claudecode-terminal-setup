@@ -262,11 +262,13 @@ def server_segment():
     parts = []
     for p in ports[:3]:
         link = f"http://localhost:{p}"
+        # OSC 8 (iTerm2/WezTerm/Kitty/VS Code) + URL en clair = cliquable aussi
+        # via la détection native d'URL de Terminal.app (Cmd+clic).
         osc_open = f"\033]8;;{link}\033\\"
         osc_close = "\033]8;;\033\\"
-        parts.append(f"{osc_open}:{p}{osc_close}")
-    extra = "+" if len(ports) > 3 else ""
-    return f"  ·  {GREEN}🟢 {' '.join(parts)}{extra}{RESET}"
+        parts.append(f"{osc_open}{link}{osc_close}")
+    extra = "  +" if len(ports) > 3 else ""
+    return f"  ·  {GREEN}🟢 {'  '.join(parts)}{extra}{RESET}"
 
 
 def usage_segment():
