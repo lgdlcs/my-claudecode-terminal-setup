@@ -2,7 +2,7 @@
 
 A few personal touches for your Claude Code terminal:
 
-- **Statusline** at the bottom — model, current dir, time, live **context-window** usage %, and a **plan-usage gauge** (5h window % + time-to-reset, colored 🚀/🔥/🥵/🚨)
+- **Statusline** at the bottom — model, current dir, last worked file, a 🟢 **dev-server indicator** (clickable `http://localhost:PORT` links for any common dev port that's listening), time, live **context-window** usage %, and a **plan-usage gauge** (5h window % + time-to-reset, colored 🚀/🔥/🥵/🚨)
 - **Distinct per-session terminal color** — each concurrent Claude session gets its own muted dark tint, so two windows never share a color (macOS Terminal.app via a `SessionStart` hook; Windows Git Bash via an opt-in `claude` wrapper — see below)
 - **Wordmark + sound** on each turn-end — discreet `✳ Claude Code` + a soft sound when Claude hands back to you
 - **Custom spinner verbs** — `Brewing...`, `Galaxy-braining...`, `Marinating...` mixed with built-ins
@@ -111,6 +111,7 @@ ANSI colors need a VT-capable terminal — Windows Terminal works out of the box
 | Refresh cadence of the plan gauge | `TTL = 180` in `statusline.py` |
 | Context window size | `CTX_WINDOW = 200_000` in `statusline.py` |
 | Gauge thresholds / emojis | `usage_segment()` in `statusline.py` |
+| Dev ports scanned for the 🟢 server indicator | `DEV_PORTS` in `statusline.py` (5000/7000 excluded — macOS AirPlay) |
 | Add/remove spinner verbs | `spinnerVerbs.verbs` array in `settings.json` |
 | Drop built-in verbs | change `spinnerVerbs.mode` from `"append"` to `"replace"` |
 | Different macOS sound | swap `Pop.aiff` for `Tink.aiff`, `Glass.aiff`, … (in `/System/Library/Sounds/`) |

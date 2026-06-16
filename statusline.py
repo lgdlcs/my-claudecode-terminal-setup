@@ -2,7 +2,10 @@
 """Statusline cross-platform pour Claude Code (macOS + Windows natif).
 
 Lit le JSON de session sur stdin et affiche :
-  ✳ Model · dir · HH:MM · <emoji> NN% ctx · <emoji> jauge quota ⏳reset
+  ✳ Model · dir · 📄 fichier · 🟢 serveurs · HH:MM · <emoji> NN% ctx · <emoji> jauge quota ⏳reset
+
+Le segment serveur sonde les ports de dev courants sur 127.0.0.1 (cross-platform,
+sans lsof/netstat) et affiche en vert ceux qui écoutent, en liens cliquables.
 
 Le quota de forfait (fenêtre 5h) est lu depuis ~/.claude/usage-cache.json,
 rafraîchi en arrière-plan par usage-refresh.py quand le cache est périmé.
@@ -27,7 +30,13 @@ TMP = Path(tempfile.gettempdir())
 RESET = "\033[0m"
 DIM = "\033[2m"
 CYAN = "\033[36m"
+GREEN = "\033[32m"
 ORANGE = "\033[38;5;208m"
+
+# Ports de dev courants sondés pour détecter un serveur local actif
+# NB : 5000 et 7000 sont exclus (AirPlay Receiver de macOS y écoute en permanence)
+DEV_PORTS = [3000, 3001, 4000, 4200, 5173, 5174, 8000, 8080, 8081, 8888, 9000, 19000]
+PORT_TTL = 3  # secondes de cache pour le scan des ports
 
 # Outils du transcript qui « touchent » un fichier
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
@@ -215,6 +224,51 @@ def file_segment(transcript):
     return f"  ·  {osc_open}{CYAN}📄 {text}{RESET}{osc_close}"
 
 
+def _port_open(port):
+    """True si un service écoute sur 127.0.0.1:port (connexion TCP brève)."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(0.04)
+    try:
+        return s.connect_ex(("127.0.0.1", port)) == 0
+    except Exception:
+        return False
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+
+def server_segment():
+    """Affiche les ports de dev qui écoutent, en vert et cliquables.
+    Résultat caché ~PORT_TTL secondes pour éviter de re-scanner à chaque rendu."""
+    cache_file = TMP / "statusline-ports"
+    now = time.time()
+    ports = None
+    try:
+        if cache_file.is_file() and now - cache_file.stat().st_mtime < PORT_TTL:
+            ports = json.loads(cache_file.read_text(encoding="utf-8"))
+    except Exception:
+        ports = None
+    if ports is None:
+        ports = [p for p in DEV_PORTS if _port_open(p)]
+        try:
+            cache_file.write_text(json.dumps(ports), encoding="utf-8")
+        except Exception:
+            pass
+    if not ports:
+        return ""
+    parts = []
+    for p in ports[:3]:
+        link = f"http://localhost:{p}"
+        osc_open = f"\033]8;;{link}\033\\"
+        osc_close = "\033]8;;\033\\"
+        parts.append(f"{osc_open}:{p}{osc_close}")
+    extra = "+" if len(ports) > 3 else ""
+    return f"  ·  {GREEN}🟢 {' '.join(parts)}{extra}{RESET}"
+
+
 def usage_segment():
     now = int(time.time())
     fetched = 0
@@ -285,10 +339,11 @@ def main():
     transcript = data.get("transcript_path") or ""
     tstr = time.strftime("%H:%M", time.localtime())
     fileseg = file_segment(transcript)
+    serverseg = server_segment()
     ctx = context_segment(transcript)
     usage = usage_segment()
 
-    sys.stdout.write(f"{ORANGE}✳ {model_name}{RESET}  ·  {dir_short}{fileseg}  ·  {tstr}{ctx}{usage}")
+    sys.stdout.write(f"{ORANGE}✳ {model_name}{RESET}  ·  {dir_short}{fileseg}{serverseg}  ·  {tstr}{ctx}{usage}")
 
 
 if __name__ == "__main__":
