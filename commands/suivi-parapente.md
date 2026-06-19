@@ -18,11 +18,13 @@ Tu mets à jour le **suivi de la campagne parapente** d'alt-tab studio en te bas
 
 1. **Lis** `campaign_parapente.json`. Construis la liste des prospects **en attente de réponse** : ceux dont le `status` est `sent`, `r1` ou `r2`. Note aussi (pour info) ceux en `replied` / `meeting` afin de repérer un éventuel **nouveau** message entrant dans leur thread.
 
-2. **Pour chaque prospect à scanner**, cherche une réponse **entrante** dans Gmail avec `mcp__gmail__search_emails` :
-   - Requête : `from:<email> newer_than:25d` (utilise le champ `email` du prospect).
+2. **Pour chaque prospect à scanner**, examine **tout le fil** dans Gmail avec `mcp__gmail__search_emails` :
+   - Requête entrante : `from:<email> newer_than:25d` (utilise le champ `email` du prospect).
+   - Requête sortante (indispensable) : `to:<email>` — pour voir **tes propres réponses déjà envoyées**.
    - Si le prospect a un `thread_id` non vide, c'est un indice fort : une réponse dans ce thread = réponse du prospect.
    - Ouvre les messages pertinents avec `mcp__gmail__read_email` pour lire le contenu réel avant de classer (ne te fie jamais au seul objet).
-   - ⚠️ Ignore les accusés de réception automatiques, les réponses « absent du bureau / vacances », et tes propres messages sortants.
+   - ⚠️ Ignore les accusés de réception automatiques, les réponses « absent du bureau / vacances » et les passerelles anti-spam (challenge de whitelist type secur-mail : le mail n'a PAS été délivré → pas une réponse).
+   - **Détermine qui a le dernier mot** : repère le message le plus récent du fil et sa direction (entrant = du prospect / sortant = de toi, `legrand.lucas0@gmail.com`). C'est ce qui décide de la prochaine action (cf. étape 6) : si **tu** as déjà répondu en dernier, la balle est dans le camp du prospect — **ne propose pas de lui répondre**.
 
 3. **Classe chaque réponse trouvée** et mets à jour le statut :
    - Intérêt / question / demande d'infos / neutre positif → `replied`.
@@ -47,4 +49,7 @@ Tu mets à jour le **suivi de la campagne parapente** d'alt-tab studio en te bas
    - Prospects en statut terminal ayant reçu un **nouveau** message (à arbitrer).
    - Si 0 réponse et 0 changement : le dire simplement (« RAS, aucune nouvelle réponse »).
 
-   Termine par la **prochaine action conseillée** (ex. « 2 nouvelles réponses `replied` → préparer une réponse personnalisée », ou « lancer le plan de relances via le RUNBOOK »). N'exécute pas cette action : cette commande s'arrête au suivi.
+   Termine par la **prochaine action conseillée**, en tenant compte de qui a le dernier mot (étape 2) :
+   - Dernier message **du prospect** (entrant non répondu) → « répondre à X » / « préparer le devis ».
+   - Dernier message **de toi** (sortant) → « en attente du retour de X », **ne pas** proposer de répondre.
+   N'exécute pas cette action : cette commande s'arrête au suivi.
