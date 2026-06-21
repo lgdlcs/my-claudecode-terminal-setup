@@ -38,18 +38,24 @@ on run argv
 
 	tell application "Terminal"
 		activate
-		set vis to every window whose visible is true
-		set deficit to n - (count vis)
+		-- Mémorise les fenêtres déjà ouvertes (par id) avant d'en créer de nouvelles
+		set existingIds to {}
+		repeat with w in (every window whose visible is true)
+			set end of existingIds to (id of w)
+		end repeat
+		set deficit to n - (count existingIds)
 		if deficit > 0 then
+			-- Chaque fenêtre neuve lance directement claude (pas de course sur « busy »
+			-- pendant l'initialisation du shell, qui laissait sinon la 1re fenêtre vide)
 			repeat deficit times
-				do script ""
+				do script "claude"
 			end repeat
 			repeat 25 times
-				set vis to every window whose visible is true
-				if (count vis) ≥ n then exit repeat
+				if (count (every window whose visible is true)) ≥ n then exit repeat
 				delay 0.2
 			end repeat
 		end if
+		set vis to every window whose visible is true
 		if (count vis) < n then error "Moins de " & n & " fenêtres Terminal visibles après ouverture."
 
 		-- Pave les n premières fenêtres selon la grille (place maximale chacune)
@@ -70,13 +76,18 @@ on run argv
 			end repeat
 		end repeat
 
-		-- Lance claude dans chaque fenêtre libre, puis passe chaque session en /effort max.
-		-- On ne touche qu'aux fenêtres où l'on vient de lancer claude.
+		-- Lance claude là où il manque, puis passe chaque session lancée en /effort max.
+		-- Fenêtres neuves : claude est déjà lancé à l'ouverture. Fenêtres pré-existantes :
+		-- on ne lance claude que si elles sont libres (une session occupée est laissée telle quelle).
 		set launched to {}
 		repeat with i from 1 to n
 			set w to item i of vis
-			if not busy of w then
-				do script "claude" in w
+			if existingIds contains (id of w) then
+				if not busy of w then
+					do script "claude" in w
+					set end of launched to w
+				end if
+			else
 				set end of launched to w
 			end if
 		end repeat
