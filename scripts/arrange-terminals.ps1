@@ -1,17 +1,34 @@
-# Equivalent Windows de arrange-3-terminals.applescript :
-# range 3 fenetres de terminal en trois colonnes (tiers gauche/centre/droit),
-# avec claude lance dans les fenetres nouvellement ouvertes, puis chaque session
-# neuve passee en /effort max.
+# Ouvre, range et lance claude dans N fenetres de terminal (N de 1 a 6).
+# Equivalent Windows de arrange-terminals.applescript : les fenetres pavent
+# l'ecran en grille pour que chacune occupe la place maximale, et toutes les N
+# fenetres sont visibles. claude est lance dans les fenetres nouvellement
+# ouvertes, puis chaque session neuve passe en /effort max.
+# Argument : le nombre de terminaux (1..6). Defaut : 3 si absent/invalide.
 # Utilise Windows Terminal (wt.exe) si present, sinon des fenetres PowerShell (conhost).
-# Comme macOS : on n'ouvre que les fenetres manquantes (deficit pour atteindre 3),
+# Comme macOS : on n'ouvre que les fenetres manquantes (deficit pour atteindre N),
 # on range les fenetres existantes au lieu d'en empiler de nouvelles, et on ne lance
 # claude QUE dans les fenetres neuves (jamais dans une fenetre deja occupee par un process).
 
+param([int]$Count = 3)
+
 $ErrorActionPreference = "Stop"
+if ($Count -lt 1) { $Count = 1 }
+if ($Count -gt 6) { $Count = 6 }
 
 Add-Type -AssemblyName System.Windows.Forms
 $work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-$colW = [math]::Floor($work.Width / 3)
+
+# Grille : nombre de colonnes par rangee (de haut en bas)
+switch ($Count) {
+    1 { $layout = @(1) }
+    2 { $layout = @(2) }
+    3 { $layout = @(3) }
+    4 { $layout = @(2, 2) }
+    5 { $layout = @(3, 2) }
+    default { $layout = @(3, 3) }
+}
+$rowCount = $layout.Count
+$rowH = [math]::Floor($work.Height / $rowCount)
 
 Add-Type @"
 using System;
@@ -44,8 +61,8 @@ public class TermWin {
 # Snapshot des terminaux deja ouverts
 $before = @([TermWin]::Terminals())
 
-# On n'ouvre que ce qui manque pour atteindre 3 fenetres
-$deficit = 3 - $before.Count
+# On n'ouvre que ce qui manque pour atteindre $Count fenetres
+$deficit = $Count - $before.Count
 $new = @()
 
 if ($deficit -gt 0) {
@@ -72,14 +89,25 @@ if ($deficit -gt 0) {
     }
 }
 
-# Range les 3 premieres fenetres (existantes d'abord, puis nouvelles) dans les tiers.
-# Les terminaux au-dela de 3 sont laisses tels quels.
-$all = @($before + $new) | Select-Object -First 3
-$i = 0
-foreach ($h in $all) {
-    [TermWin]::MoveWindow($h, $work.X + $i * $colW, $work.Y, $colW, $work.Height, $true) | Out-Null
-    $i++
+# Pave les $Count premieres fenetres (existantes d'abord, puis nouvelles) en grille,
+# chacune occupant sa cellule (place maximale). Les terminaux au-dela de $Count
+# sont laisses tels quels.
+$all = @($before + $new) | Select-Object -First $Count
+$idx = 0
+for ($r = 0; $r -lt $rowCount; $r++) {
+    $colsInRow = $layout[$r]
+    $colW = [math]::Floor($work.Width / $colsInRow)
+    $top = $work.Y + $r * $rowH
+    if ($r -eq $rowCount - 1) { $cellH = $work.Height - $r * $rowH } else { $cellH = $rowH }
+    for ($c = 0; $c -lt $colsInRow; $c++) {
+        if ($idx -ge $all.Count) { break }
+        $x = $work.X + $c * $colW
+        if ($c -eq $colsInRow - 1) { $cellW = $work.Width - $c * $colW } else { $cellW = $colW }
+        [TermWin]::MoveWindow($all[$idx], $x, $top, $cellW, $cellH, $true) | Out-Null
+        $idx++
+    }
 }
+
 # Passe chaque session claude nouvellement lancee en /effort max.
 # On laisse claude demarrer, puis on cible la fenetre et on tape la commande.
 # Seules les fenetres neuves sont touchees (les sessions deja occupees sont intactes).
@@ -93,4 +121,4 @@ if ($new.Count -gt 0) {
     }
 }
 
-Write-Host "OK : $i fenetre(s) rangee(s), $($new.Count) nouvelle(s) lancee(s) en /effort max."
+Write-Host "OK : $idx fenetre(s) rangee(s) en grille, $($new.Count) nouvelle(s) lancee(s) en /effort max."
