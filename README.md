@@ -63,13 +63,6 @@ The `/terminaux` slash command opens and arranges 3 terminal windows in thirds o
 
 > Contributing rule: any new command or config pushed to this repo must ship **both** a macOS and a Windows implementation (installed by `install.sh` and `install.ps1` respectively), or document the gap in the OS support table below.
 
-## /loop — redirect to a dedicated loop terminal
-
-`/loop` runs an autonomous, self-paced loop. A `UserPromptSubmit` hook (`loop-terminal-hook.sh`) intercepts it and shunts it into a **dedicated "Claude Loops" terminal**, so a long-running loop never hijacks the session you typed it in.
-
-- **macOS (Terminal.app)** — `loop-terminal.sh` finds (or opens) the dedicated tab. A loop session is identified by a per-session marker file `~/.claude/.loop-sessions/<tty>` that the session writes on start and removes on exit — **not** by tab title (overwritten by the shell / Claude Code) nor by a remembered TTY (recycled by macOS, which previously made `/loop` redirect onto the *current* session). A live busy loop tab is reused, a stale marker is purged, otherwise a fresh window opens. The loop session is marked with `CLAUDE_LOOP_TERMINAL=1` so its own hook lets `/loop` through instead of re-redirecting.
-- **Windows** — not implemented; the hook is guarded by `case "$OSTYPE" in darwin*)`, so `/loop` runs in the current session.
-
 ## Permissions & bypass alias
 
 Two layers, so day-to-day use needs no confirmation clicks:
@@ -99,7 +92,6 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | Sound          | `Pop.aiff`         | PowerShell beep    | skipped     |
 | Wordmark       | yes                | yes                | yes         |
 | /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
-| /loop → dedicated terminal | yes (Terminal.app) | no                 | no          |
 | Spinner verbs  | yes                | yes                | yes         |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
