@@ -98,4 +98,5 @@ on run argv
 			end repeat
 		end if
 	end tell
+	return -- évite qu'osascript imprime la référence de la dernière commande
 end run
