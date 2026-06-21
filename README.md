@@ -93,6 +93,7 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | Wordmark       | yes                | yes                | yes         |
 | /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
 | Spinner verbs  | yes                | yes                | yes         |
+| Bypass `claude` alias | yes (zsh) | no (add a PowerShell function by hand) | yes (zsh) |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
 
