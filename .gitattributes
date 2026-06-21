@@ -1,5 +1,15 @@
 # Shell scripts must always use LF, even on Windows, or Git Bash chokes on \r
-*.sh text eol=lf
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Python runtime: LF so shebangs and WSL / Git Bash never see \r
+*.py   text eol=lf
+
+# macOS-only AppleScript: LF
+*.applescript text eol=lf
+
+# PowerShell stays CRLF (Windows-native)
+*.ps1  text eol=crlf
 
 # JSON config stays LF for consistency
 *.json text eol=lf
