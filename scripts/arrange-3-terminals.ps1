@@ -1,6 +1,7 @@
 # Equivalent Windows de arrange-3-terminals.applescript :
 # range 3 fenetres de terminal en trois colonnes (tiers gauche/centre/droit),
-# avec claude lance dans les fenetres nouvellement ouvertes.
+# avec claude lance dans les fenetres nouvellement ouvertes, puis chaque session
+# neuve passee en /effort max.
 # Utilise Windows Terminal (wt.exe) si present, sinon des fenetres PowerShell (conhost).
 # Comme macOS : on n'ouvre que les fenetres manquantes (deficit pour atteindre 3),
 # on range les fenetres existantes au lieu d'en empiler de nouvelles, et on ne lance
@@ -23,6 +24,7 @@ public class TermWin {
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hWnd);
     [DllImport("user32.dll")] static extern int GetClassName(IntPtr hWnd, StringBuilder sb, int max);
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
     public static List<IntPtr> Terminals() {
         var found = new List<IntPtr>();
         EnumWindows(delegate(IntPtr h, IntPtr l) {
@@ -78,4 +80,17 @@ foreach ($h in $all) {
     [TermWin]::MoveWindow($h, $work.X + $i * $colW, $work.Y, $colW, $work.Height, $true) | Out-Null
     $i++
 }
-Write-Host "OK : $i fenetre(s) rangee(s), $($new.Count) nouvelle(s) lancee(s)."
+# Passe chaque session claude nouvellement lancee en /effort max.
+# On laisse claude demarrer, puis on cible la fenetre et on tape la commande.
+# Seules les fenetres neuves sont touchees (les sessions deja occupees sont intactes).
+if ($new.Count -gt 0) {
+    Start-Sleep -Seconds 5
+    foreach ($h in $new) {
+        [TermWin]::SetForegroundWindow($h) | Out-Null
+        Start-Sleep -Milliseconds 400
+        [System.Windows.Forms.SendKeys]::SendWait("/effort max{ENTER}")
+        Start-Sleep -Milliseconds 250
+    }
+}
+
+Write-Host "OK : $i fenetre(s) rangee(s), $($new.Count) nouvelle(s) lancee(s) en /effort max."

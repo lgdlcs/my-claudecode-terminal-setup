@@ -56,10 +56,10 @@ State lives in `~/.claude/session-colors/`; dead sessions are pruned automatical
 
 ## /terminaux — 3 Claude sessions side by side
 
-The `/terminaux` slash command opens and arranges 3 terminal windows in thirds of the screen (left/center/right column), each running `claude`.
+The `/terminaux` slash command opens and arranges 3 terminal windows in thirds of the screen (left/center/right column), each running `claude`, and then switches every freshly launched session to `/effort max`.
 
-- **macOS** — `~/Library/Scripts/arrange-3-terminals.applescript` (Terminal.app): reuses existing windows, opens the missing ones, then launches `claude` in every idle window (windows already running a process are left untouched).
-- **Windows** — `~/.claude/scripts/arrange-3-terminals.ps1`: opens 3 new windows (Windows Terminal if available, plain PowerShell otherwise), tiles them in thirds and launches `claude` in each. Always opens new windows, since injecting a command into an existing window could type into a running process.
+- **macOS** — `~/Library/Scripts/arrange-3-terminals.applescript` (Terminal.app): reuses existing windows, opens the missing ones, launches `claude` in every idle window (windows already running a process are left untouched), then after a ~5 s startup delay sends `/effort max` into each session it just launched.
+- **Windows** — `~/.claude/scripts/arrange-3-terminals.ps1`: opens 3 new windows (Windows Terminal if available, plain PowerShell otherwise), tiles them in thirds, launches `claude` in each, then sends `/effort max` to every new window via `SendKeys`. Always opens new windows, since injecting a command into an existing window could type into a running process.
 
 > Contributing rule: any new command or config pushed to this repo must ship **both** a macOS and a Windows implementation (installed by `install.sh` and `install.ps1` respectively), or document the gap in the OS support table below.
 
