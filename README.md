@@ -58,10 +58,12 @@ State lives in `~/.claude/session-colors/`; dead sessions are pruned automatical
 
 The `/terminaux` slash command takes a number from **1 to 6** (default 3) and opens that many terminal windows, tiled in a grid so each takes the maximum proportion of the screen (all visible), each running `claude`, then switches every freshly launched session to `/effort max`.
 
-Usage: `/terminaux 4`. Grid by N: **1**→full screen · **2**→2 columns · **3**→3 columns · **4**→2×2 · **5**→3+2 · **6**→3×3 (two rows of three).
+Usage: `/terminaux 4`. Grid by N: **1**→full screen · **2**→2 columns · **3**→3 columns · **4**→2×2 · **5**→3 + 2 thirds (6th cell reserved) · **6**→3×3 (two rows of three).
 
-- **macOS** — `~/Library/Scripts/arrange-terminals.applescript` (Terminal.app): reuses existing windows, opens the missing ones to reach N, tiles them in the grid, launches `claude` in every idle window (windows already running a process are left untouched), then after a ~5 s startup delay sends `/effort max` into each session it just launched.
-- **Windows** — `~/.claude/scripts/arrange-terminals.ps1`: opens the missing windows to reach N (Windows Terminal if available, plain PowerShell otherwise), tiles them in the same grid, launches `claude` in each new one, then sends `/effort max` to every new window via `SendKeys`. Only new windows are launched into, since injecting a command into an existing window could type into a running process.
+**Reserve the slot:** already-open windows are never moved as long as the grid structure stays the same. Because N=5 reserves the 6th cell (same {3,3} grid as N=6), going from 5 to 6 drops the new window into the empty cell without touching the first five, and re-running the same N moves nothing. Only a structure change (e.g. 4→5) re-tiles the whole screen.
+
+- **macOS** — `~/Library/Scripts/arrange-terminals.applescript` (Terminal.app): opens the missing windows to reach N and only places the new ones — already-open windows keep their position unless the grid structure must change, in which case the whole screen is re-tiled — launches `claude` in every idle window (windows already running a process are left untouched), then after a ~5 s startup delay sends `/effort max` into each session it just launched.
+- **Windows** — `~/.claude/scripts/arrange-terminals.ps1`: opens the missing windows to reach N (Windows Terminal if available, plain PowerShell otherwise) and only places the new ones (same rule: existing windows stay put unless the grid structure changes), launches `claude` in each new one, then sends `/effort max` to every new window via `SendKeys`. Only new windows are launched into, since injecting a command into an existing window could type into a running process.
 
 > Contributing rule: any new command or config pushed to this repo must ship **both** a macOS and a Windows implementation (installed by `install.sh` and `install.ps1` respectively), or document the gap in the OS support table below.
 
