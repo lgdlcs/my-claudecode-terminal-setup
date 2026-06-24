@@ -12,6 +12,10 @@
 --     la nouvelle prend la 6e case ;
 --   * changement de structure (ex. 4 -> 5, {2,2} -> {3,3}) -> les cases changent
 --     donc aucune fenêtre ne « matche » : ré-agencement complet.
+--
+-- Robustesse : tout l'accès aux fenêtres se fait par leur id, sous garde `try`.
+-- Une fenêtre cassée (zombie) ou en cours d'initialisation (id/bounds pas encore
+-- lisibles) est IGNORÉE au lieu de faire planter toute la boucle de pavage.
 -- Argument : le nombre de terminaux (1..6). Défaut : 3 si absent/invalide.
 
 on layoutFor(k)
@@ -34,6 +38,21 @@ end layoutFor
 on near(v, target, tol)
 	return (v ≥ target - tol) and (v ≤ target + tol)
 end near
+
+-- Ids des fenêtres visibles RÉELLEMENT exploitables (id + bounds lisibles).
+on usableIds()
+	set acc to {}
+	tell application "Terminal"
+		repeat with w in (every window whose visible is true)
+			try
+				set wid to id of w
+				set b to bounds of w -- vérifie l'accessibilité
+				set end of acc to wid
+			end try
+		end repeat
+	end tell
+	return acc
+end usableIds
 
 on run argv
 	set n to 3
@@ -81,12 +100,9 @@ on run argv
 
 	tell application "Terminal"
 		activate
-		-- Fenêtres déjà ouvertes (mémorisées par id) : sert à distinguer les
-		-- fenêtres neuves (claude lancé à l'ouverture) des préexistantes.
-		set existingIds to {}
-		repeat with w in (every window whose visible is true)
-			set end of existingIds to (id of w)
-		end repeat
+		-- Fenêtres déjà ouvertes ET exploitables (sert à distinguer les fenêtres
+		-- neuves des préexistantes ; les zombies sont exclus du compte).
+		set existingIds to my usableIds()
 		set existingCount to (count existingIds)
 		set deficit to n - existingCount
 
@@ -96,33 +112,44 @@ on run argv
 			repeat deficit times
 				do script "claude"
 			end repeat
+			-- attend que le nombre de fenêtres exploitables atteigne n
 			repeat 25 times
-				if (count (every window whose visible is true)) ≥ n then exit repeat
+				if (count (my usableIds())) ≥ n then exit repeat
 				delay 0.2
 			end repeat
+			delay 0.5 -- laisse les nouvelles fenêtres se stabiliser
 		end if
 
-		set vis to every window whose visible is true
-		if (count vis) < n then error "Moins de " & n & " fenêtres Terminal visibles après ouverture."
+		-- Snapshot exploitable : id + bounds de chaque fenêtre lisible.
+		set ids to {}
+		set rects to {}
+		repeat with w in (every window whose visible is true)
+			try
+				set wid to id of w
+				set b to bounds of w
+				set end of ids to wid
+				set end of rects to b
+			end try
+		end repeat
+		if (count ids) < n then error "Moins de " & n & " fenêtres Terminal exploitables après ouverture."
 
 		-- Positionnement match-cells.
 		set tol to 30
-		set gridWindowIds to {}
-		-- filledCell : une case déjà occupée par une fenêtre (à tol près).
+		set gridIds to {}
 		set filledCell to {}
 		repeat with i from 1 to cellCount
 			set end of filledCell to false
 		end repeat
 
 		-- Passe 1 : les fenêtres déjà dans une case conservent leur place.
-		repeat with w in vis
-			set {a, b, c, d} to bounds of w
+		repeat with k from 1 to (count ids)
+			set {a, b, c, d} to item k of rects
 			repeat with i from 1 to cellCount
 				if (item i of filledCell) is false then
 					set {ca, cb, cc, cd} to item i of targetCells
 					if (my near(a, ca, tol)) and (my near(b, cb, tol)) and (my near(c, cc, tol)) and (my near(d, cd, tol)) then
 						set item i of filledCell to true
-						set end of gridWindowIds to (id of w)
+						set end of gridIds to (item k of ids)
 						exit repeat
 					end if
 				end if
@@ -135,12 +162,15 @@ on run argv
 			if (item i of filledCell) is false then set end of freeCells to i
 		end repeat
 		set fi to 0
-		repeat with w in vis
+		repeat with k from 1 to (count ids)
 			if fi ≥ (count freeCells) then exit repeat
-			if gridWindowIds does not contain (id of w) then
+			set wid to item k of ids
+			if gridIds does not contain wid then
 				set fi to fi + 1
-				set bounds of w to (item (item fi of freeCells) of targetCells)
-				set end of gridWindowIds to (id of w)
+				try
+					set bounds of (window id wid) to (item (item fi of freeCells) of targetCells)
+					set end of gridIds to wid
+				end try
 			end if
 		end repeat
 
@@ -148,22 +178,25 @@ on run argv
 		-- chaque session lancée en /effort max. Fenêtres neuves : claude déjà
 		-- lancé à l'ouverture. Préexistantes : claude seulement si elles sont libres.
 		set launched to {}
-		repeat with w in vis
-			if gridWindowIds contains (id of w) then
-				if existingIds contains (id of w) then
+		repeat with wid in gridIds
+			try
+				set w to window id wid
+				if existingIds contains (contents of wid) then
 					if not busy of w then
 						do script "claude" in w
-						set end of launched to w
+						set end of launched to (contents of wid)
 					end if
 				else
-					set end of launched to w
+					set end of launched to (contents of wid)
 				end if
-			end if
+			end try
 		end repeat
 		if (count launched) > 0 then
 			delay 5
-			repeat with w in launched
-				do script "/effort max" in w
+			repeat with wid in launched
+				try
+					do script "/effort max" in (window id (contents of wid))
+				end try
 			end repeat
 		end if
 	end tell
