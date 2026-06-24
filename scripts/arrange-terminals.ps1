@@ -1,14 +1,18 @@
 # Ouvre, range et lance claude dans N fenetres de terminal (N de 1 a 6).
 # Equivalent Windows de arrange-terminals.applescript.
-# Mode "reserver la place" : les fenetres DEJA ouvertes ne sont jamais
-# deplacees tant que la structure de grille ne change pas. N=5 utilise la
-# grille {3,3} en reservant la 6e case vide (meme geometrie que N=6), si bien
-# que passer de 5 a 6 ajoute la nouvelle fenetre dans la case libre sans bouger
-# les 5 premieres. Relancer le meme N ne deplace rien non plus. Un changement
-# de structure de grille (ex. 4->5) re-agence l'ensemble (geometriquement
-# inevitable quand l'ecran est deja plein).
+#
+# Positionnement "match-cells" : on calcule les cases de la grille de N, puis
+# chaque fenetre n'est deplacee QUE si elle n'occupe pas deja une case (a une
+# tolerance pres). Consequences :
+#   * fenetres superposees / mal placees (meme deja ouvertes) -> re-pavees ;
+#   * relance du meme N alors que tout est deja en grille -> rien ne bouge ;
+#   * 5 -> 6 (meme geometrie {3,3}) -> les 5 fenetres en place ne bougent pas,
+#     la nouvelle prend la 6e case ;
+#   * changement de structure (ex. 4 -> 5, {2,2} -> {3,3}) -> les cases changent
+#     donc aucune fenetre ne "matche" : re-agencement complet.
 # claude est lance uniquement dans les fenetres neuves, puis chaque session
-# neuve passe en /effort max.
+# neuve passe en /effort max (Windows ne sait pas detecter "busy" -> on ne
+# relance pas claude dans une fenetre preexistante).
 # Argument : le nombre de terminaux (1..6). Defaut : 3 si absent/invalide.
 # Utilise Windows Terminal (wt.exe) si present, sinon des fenetres PowerShell.
 
@@ -17,19 +21,6 @@ param([int]$Count = 3)
 $ErrorActionPreference = "Stop"
 if ($Count -lt 1) { $Count = 1 }
 if ($Count -gt 6) { $Count = 6 }
-
-# Signature de la grille de reserve (colonnes par rangee) pour un nombre donne.
-# Sert a detecter qu'une croissance reste dans la meme structure de grille.
-function Get-LayoutSig([int]$k) {
-    switch ($k) {
-        1 { "1" }
-        2 { "2" }
-        3 { "3" }
-        4 { "2,2" }
-        5 { "3,3" }   # 5 = {3,3} avec la 6e case reservee vide
-        default { "3,3" }
-    }
-}
 
 Add-Type -AssemblyName System.Windows.Forms
 $work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
@@ -68,11 +59,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 public class TermWin {
     public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr lParam);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hWnd);
     [DllImport("user32.dll")] static extern int GetClassName(IntPtr hWnd, StringBuilder sb, int max);
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
     public static List<IntPtr> Terminals() {
         var found = new List<IntPtr>();
         EnumWindows(delegate(IntPtr h, IntPtr l) {
@@ -89,7 +83,7 @@ public class TermWin {
 }
 "@
 
-# Snapshot des terminaux deja ouverts (jamais deplaces sauf changement de structure).
+# Snapshot des terminaux deja ouverts (pour distinguer les fenetres neuves).
 $before = @([TermWin]::Terminals())
 $existingCount = $before.Count
 
@@ -121,36 +115,47 @@ if ($deficit -gt 0) {
     }
 }
 
-# Croissance "propre" : on ne deplace pas l'existant si la grille de $existingCount
-# a la meme structure que celle de $Count (cellules 1..$existingCount aux memes
-# emplacements). En pratique : 5->6, et toute relance du meme N (deficit nul).
-$sameBaseGrid = ($existingCount -gt 0) -and ($existingCount -lt $Count) -and `
-    ((Get-LayoutSig $existingCount) -eq (Get-LayoutSig $Count))
+# Positionnement match-cells : on ne remplit que les $Count premieres cases
+# (n=5 -> 5 cases sur 6).
+$all = @([TermWin]::Terminals())
+$cellCount = [math]::Min($cellRects.Count, $Count)
+$targets = @($cellRects[0..($cellCount - 1)])
 
-$placed = 0
-if ($deficit -le 0) {
-    # Rien de neuf : aucune fenetre n'est deplacee.
-} elseif ($sameBaseGrid) {
-    # On place UNIQUEMENT les fenetres neuves, dans les cases de queue
-    # ($existingCount .. ). Les fenetres existantes ne bougent pas.
-    for ($j = 0; $j -lt $new.Count; $j++) {
-        $ci = $existingCount + $j
-        if ($ci -lt $cellRects.Count) {
-            $cell = $cellRects[$ci]
-            [TermWin]::MoveWindow($new[$j], $cell.X, $cell.Y, $cell.W, $cell.H, $true) | Out-Null
-            $placed++
+$tol = 30
+$filled = New-Object 'bool[]' $cellCount
+$gridHandles = @()
+
+# Passe 1 : les fenetres deja dans une case conservent leur place.
+foreach ($h in $all) {
+    $rect = New-Object TermWin+RECT
+    if (-not [TermWin]::GetWindowRect($h, [ref]$rect)) { continue }
+    $x = $rect.Left; $y = $rect.Top; $w = $rect.Right - $rect.Left; $hh = $rect.Bottom - $rect.Top
+    for ($i = 0; $i -lt $cellCount; $i++) {
+        if (-not $filled[$i]) {
+            $c = $targets[$i]
+            if (([math]::Abs($x - $c.X) -le $tol) -and ([math]::Abs($y - $c.Y) -le $tol) -and `
+                ([math]::Abs($w - $c.W) -le $tol) -and ([math]::Abs($hh - $c.H) -le $tol)) {
+                $filled[$i] = $true
+                $gridHandles += $h
+                break
+            }
         }
     }
-} else {
-    # Changement de structure de grille (ou premier lancement) :
-    # on pave les $Count premieres fenetres dans les cellules 0..$Count-1.
-    $all = @($before + $new) | Select-Object -First $Count
-    for ($i = 0; $i -lt $all.Count; $i++) {
-        if ($i -lt $cellRects.Count) {
-            $cell = $cellRects[$i]
-            [TermWin]::MoveWindow($all[$i], $cell.X, $cell.Y, $cell.W, $cell.H, $true) | Out-Null
-            $placed++
-        }
+}
+
+# Passe 2 : les fenetres non placees remplissent les cases libres.
+$freeCells = @()
+for ($i = 0; $i -lt $cellCount; $i++) { if (-not $filled[$i]) { $freeCells += $i } }
+$fi = 0
+$placed = 0
+foreach ($h in $all) {
+    if ($fi -ge $freeCells.Count) { break }
+    if ($gridHandles -notcontains $h) {
+        $cell = $targets[$freeCells[$fi]]
+        [TermWin]::MoveWindow($h, $cell.X, $cell.Y, $cell.W, $cell.H, $true) | Out-Null
+        $gridHandles += $h
+        $fi++
+        $placed++
     }
 }
 
@@ -167,4 +172,4 @@ if ($new.Count -gt 0) {
     }
 }
 
-Write-Host "OK : $placed fenetre(s) placee(s), $($new.Count) nouvelle(s) lancee(s) en /effort max."
+Write-Host "OK : $placed fenetre(s) re-pavee(s), $($new.Count) nouvelle(s) lancee(s) en /effort max."

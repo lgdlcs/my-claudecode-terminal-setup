@@ -2,13 +2,16 @@
 -- Les fenêtres pavent l'écran en grille pour que chacune occupe la place
 -- maximale. claude est lancé dans chaque fenêtre libre, puis chaque session
 -- ainsi lancée passe en /effort max.
--- Mode « réserver la place » : les fenêtres DÉJÀ ouvertes ne sont jamais
--- déplacées tant que la structure de grille ne change pas. N=5 utilise la
--- grille {3,3} en réservant la 6e case vide (même géométrie que N=6), si bien
--- que passer de 5 à 6 ajoute la nouvelle fenêtre dans la case libre sans bouger
--- les 5 premières. Relancer le même N ne déplace rien non plus. Seul un
--- changement de structure de grille (ex. 4→5) ré-agence l'ensemble
--- (géométriquement inévitable quand l'écran est déjà plein).
+--
+-- Positionnement « match-cells » : on calcule les cases de la grille de N, puis
+-- chaque fenêtre n'est déplacée QUE si elle n'occupe pas déjà une case (à une
+-- tolérance près). Conséquences :
+--   * fenêtres superposées / mal placées (même si déjà ouvertes) -> re-pavées ;
+--   * relance du même N alors que tout est déjà en grille -> rien ne bouge ;
+--   * 5 -> 6 (même géométrie {3,3}) -> les 5 fenêtres en place ne bougent pas,
+--     la nouvelle prend la 6e case ;
+--   * changement de structure (ex. 4 -> 5, {2,2} -> {3,3}) -> les cases changent
+--     donc aucune fenêtre ne « matche » : ré-agencement complet.
 -- Argument : le nombre de terminaux (1..6). Défaut : 3 si absent/invalide.
 
 on layoutFor(k)
@@ -27,6 +30,10 @@ on layoutFor(k)
 		return {3, 3}
 	end if
 end layoutFor
+
+on near(v, target, tol)
+	return (v ≥ target - tol) and (v ≤ target + tol)
+end near
 
 on run argv
 	set n to 3
@@ -64,10 +71,18 @@ on run argv
 		end repeat
 	end repeat
 
+	-- On ne remplit que les n premières cases (n=5 -> 5 cases sur 6).
+	set cellCount to (count cellRects)
+	if cellCount > n then set cellCount to n
+	set targetCells to {}
+	repeat with i from 1 to cellCount
+		set end of targetCells to item i of cellRects
+	end repeat
+
 	tell application "Terminal"
 		activate
-		-- Fenêtres déjà ouvertes : mémorisées par id (jamais déplacées sauf
-		-- changement de structure de grille).
+		-- Fenêtres déjà ouvertes (mémorisées par id) : sert à distinguer les
+		-- fenêtres neuves (claude lancé à l'ouverture) des préexistantes.
 		set existingIds to {}
 		repeat with w in (every window whose visible is true)
 			set end of existingIds to (id of w)
@@ -90,55 +105,59 @@ on run argv
 		set vis to every window whose visible is true
 		if (count vis) < n then error "Moins de " & n & " fenêtres Terminal visibles après ouverture."
 
-		-- Fenêtres neuves (id absent du snapshot), dans leur ordre d'apparition.
-		set newIds to {}
-		repeat with w in vis
-			if existingIds does not contain (id of w) then set end of newIds to (id of w)
+		-- Positionnement match-cells.
+		set tol to 30
+		set gridWindowIds to {}
+		-- filledCell : une case déjà occupée par une fenêtre (à tol près).
+		set filledCell to {}
+		repeat with i from 1 to cellCount
+			set end of filledCell to false
 		end repeat
 
-		-- Croissance « propre » : on ne déplace pas l'existant si la grille de
-		-- existingCount a la même structure que celle de n (cellules
-		-- 1..existingCount aux mêmes emplacements). En pratique : 5→6, et
-		-- toute relance du même N (deficit nul).
-		set sameBaseGrid to false
-		if existingCount > 0 and existingCount < n then
-			if (my layoutFor(existingCount)) is equal to layout then set sameBaseGrid to true
-		end if
-
-		if deficit ≤ 0 then
-			-- Rien de neuf : aucune fenêtre n'est déplacée.
-		else if sameBaseGrid then
-			-- On place UNIQUEMENT les fenêtres neuves, dans les cases de queue
-			-- (existingCount+1 .. n). Les fenêtres existantes ne bougent pas.
-			repeat with k from 1 to (count newIds)
-				set targetIdx to existingCount + k
-				if targetIdx ≤ (count cellRects) then
-					set bounds of (window id (item k of newIds)) to (item targetIdx of cellRects)
+		-- Passe 1 : les fenêtres déjà dans une case conservent leur place.
+		repeat with w in vis
+			set {a, b, c, d} to bounds of w
+			repeat with i from 1 to cellCount
+				if (item i of filledCell) is false then
+					set {ca, cb, cc, cd} to item i of targetCells
+					if (my near(a, ca, tol)) and (my near(b, cb, tol)) and (my near(c, cc, tol)) and (my near(d, cd, tol)) then
+						set item i of filledCell to true
+						set end of gridWindowIds to (id of w)
+						exit repeat
+					end if
 				end if
 			end repeat
-		else
-			-- Changement de structure de grille (ou premier lancement) :
-			-- on pave les n premières fenêtres dans les cellules 1..n.
-			repeat with i from 1 to n
-				if i ≤ (count cellRects) then
-					set bounds of (item i of vis) to (item i of cellRects)
-				end if
-			end repeat
-		end if
+		end repeat
 
-		-- Lance claude là où il manque, puis passe chaque session lancée en
-		-- /effort max. Fenêtres neuves : claude déjà lancé à l'ouverture.
-		-- Fenêtres pré-existantes : claude seulement si elles sont libres.
+		-- Passe 2 : les fenêtres non placées remplissent les cases libres.
+		set freeCells to {}
+		repeat with i from 1 to cellCount
+			if (item i of filledCell) is false then set end of freeCells to i
+		end repeat
+		set fi to 0
+		repeat with w in vis
+			if fi ≥ (count freeCells) then exit repeat
+			if gridWindowIds does not contain (id of w) then
+				set fi to fi + 1
+				set bounds of w to (item (item fi of freeCells) of targetCells)
+				set end of gridWindowIds to (id of w)
+			end if
+		end repeat
+
+		-- Lance claude là où il manque dans les fenêtres de la grille, puis passe
+		-- chaque session lancée en /effort max. Fenêtres neuves : claude déjà
+		-- lancé à l'ouverture. Préexistantes : claude seulement si elles sont libres.
 		set launched to {}
-		repeat with i from 1 to n
-			set w to item i of vis
-			if existingIds contains (id of w) then
-				if not busy of w then
-					do script "claude" in w
+		repeat with w in vis
+			if gridWindowIds contains (id of w) then
+				if existingIds contains (id of w) then
+					if not busy of w then
+						do script "claude" in w
+						set end of launched to w
+					end if
+				else
 					set end of launched to w
 				end if
-			else
-				set end of launched to w
 			end if
 		end repeat
 		if (count launched) > 0 then
