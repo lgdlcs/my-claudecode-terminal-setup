@@ -98,6 +98,16 @@ on run argv
 		set end of targetCells to item i of cellRects
 	end repeat
 
+	-- Commande de lancement claude. Le « ; exec $SHELL -il » est ESSENTIEL : le
+	-- profil Terminal a shellExitAction=2 (« fermer la fenêtre quand le shell se
+	-- termine »), donc sans ça une fenêtre neuve se referme dès que claude rend
+	-- la main et n'est jamais peuplée. exec remplace le shell par un shell
+	-- interactif neuf -> le shell ne « se termine » jamais, la fenêtre persiste.
+	-- On garde l'alias `claude` (il s'étend bien via do script : flag
+	-- --dangerously-skip-permissions ajouté une fois) plutôt que la forme
+	-- explicite qui ferait un double flag à cause de l'alias.
+	set claudeCmd to "claude; exec $SHELL -il"
+
 	tell application "Terminal"
 		activate
 		-- Fenêtres déjà ouvertes ET exploitables (sert à distinguer les fenêtres
@@ -110,7 +120,7 @@ on run argv
 		-- claude pour éviter la course sur « busy » pendant l'init du shell).
 		if deficit > 0 then
 			repeat deficit times
-				do script "claude"
+				do script claudeCmd
 			end repeat
 			-- attend que le nombre de fenêtres exploitables atteigne n
 			repeat 25 times
@@ -183,7 +193,7 @@ on run argv
 				set w to window id wid
 				if existingIds contains (contents of wid) then
 					if not busy of w then
-						do script "claude" in w
+						do script claudeCmd in w
 						set end of launched to (contents of wid)
 					end if
 				else
