@@ -38,6 +38,15 @@ for f in "$REPO_DIR"/commands/*.md; do
   echo "Installed: $CLAUDE_DIR/commands/$(basename "$f")"
 done
 
+# --- Subagents (~/.claude/agents/) ---
+if [[ -d "$REPO_DIR/agents" ]]; then
+  mkdir -p "$CLAUDE_DIR/agents"
+  for f in "$REPO_DIR"/agents/*.md; do
+    cp "$f" "$CLAUDE_DIR/agents/"
+    echo "Installed: $CLAUDE_DIR/agents/$(basename "$f")"
+  done
+fi
+
 # --- AppleScripts (macOS only; used by /terminaux) ---
 if [[ "$(uname)" == "Darwin" && -d "$REPO_DIR/scripts" ]]; then
   mkdir -p "$HOME/Library/Scripts"
@@ -45,6 +54,43 @@ if [[ "$(uname)" == "Darwin" && -d "$REPO_DIR/scripts" ]]; then
     cp "$f" "$HOME/Library/Scripts/"
     echo "Installed: $HOME/Library/Scripts/$(basename "$f")"
   done
+fi
+
+# --- Brad (Twitter/X agent) : config + scripts + scheduled jobs ---
+if [[ -d "$REPO_DIR/twitter-agent" ]]; then
+  TA="$CLAUDE_DIR/twitter-agent"
+  mkdir -p "$TA/daily-proposals" "$TA/weekly-stats"
+  # Config seeds — ne PAS écraser les réglages/données existants (voix, stratégie, journal).
+  for f in context.md strategy.md log.md needs-lucas.md; do
+    if [[ ! -f "$TA/$f" ]]; then
+      cp "$REPO_DIR/twitter-agent/$f" "$TA/$f"
+      echo "Installed: $TA/$f"
+    else
+      echo "Kept existing: $TA/$f"
+    fi
+  done
+  # Scripts macOS (code — toujours mis à jour).
+  if [[ -d "$REPO_DIR/twitter-agent/macos" ]]; then
+    for f in "$REPO_DIR"/twitter-agent/macos/*.command "$REPO_DIR"/twitter-agent/macos/*.sh; do
+      [[ -e "$f" ]] || continue
+      cp "$f" "$TA/"
+      chmod +x "$TA/$(basename "$f")"
+      echo "Installed: $TA/$(basename "$f")"
+    done
+  fi
+  # Jobs launchd (macOS uniquement) : rendre les plists avec $HOME + (re)charger.
+  if [[ "$(uname)" == "Darwin" ]]; then
+    LA="$HOME/Library/LaunchAgents"
+    mkdir -p "$LA"
+    for tmpl in "$REPO_DIR"/twitter-agent/macos/*.plist.tmpl; do
+      [[ -e "$tmpl" ]] || continue
+      label=$(basename "$tmpl" .plist.tmpl)
+      sed "s|__HOME__|$HOME|g" "$tmpl" > "$LA/$label.plist"
+      launchctl unload "$LA/$label.plist" 2>/dev/null || true
+      launchctl load -w "$LA/$label.plist" 2>/dev/null || true
+      echo "Installed + loaded: $LA/$label.plist"
+    done
+  fi
 fi
 
 # --- CLAUDE.md (global instructions; backed up, not chmod'd) ---

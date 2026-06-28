@@ -67,6 +67,25 @@ Usage: `/terminaux 4`. Grid by N: **1**→full screen · **2**→2 columns · **
 
 > Contributing rule: any new command or config pushed to this repo must ship **both** a macOS and a Windows implementation (installed by `install.sh` and `install.ps1` respectively), or document the gap in the OS support table below.
 
+## Brad — the build-in-public Twitter/X agent
+
+**Brad** is a Claude Code subagent that runs the owner's Twitter/X presence in build-in-public mode: direct, honest, wins **and** losses. He proposes content, drafts, and posts via the Playwright MCP (a persistent, logged-in browser profile).
+
+- **Invoke** with `/brad` (no arg → 3 tweet ideas for today; arg → a specific Twitter task), or just by mentioning *build in public / tweet / Twitter* (the subagent auto-triggers on its description).
+- **Installed files:** `agents/brad.md` (subagent), `commands/brad.md` (`/brad`), and `twitter-agent/` (config + scripts) → `~/.claude/agents/`, `~/.claude/commands/`, `~/.claude/twitter-agent/`.
+- **Edit his behavior** in `~/.claude/twitter-agent/context.md` (voice, topics, quotas, language) and `strategy.md` (positioning, pillars, cadence). The installer **never overwrites** these once they exist.
+- **Kill switch:** `touch ~/.claude/twitter-agent/PAUSED` stops every job.
+
+Three scheduled jobs (background):
+
+| Job | When | Does |
+|---|---|---|
+| `brad-daily` | every day 8:00 | 3 tweet proposals (grow audience + bring value), grounded in recent `~/code` git activity; opens in VS Code |
+| `brad-weekly` | Sunday 18:00 | GitHub regularity recap (week commits, day **streak**, LOC — mocked, since AI makes LOC meaningless) drafted for Monday |
+| `brad-monday-post` | Monday 11:00 **and** 17:00 | auto-posts the weekly recap via Playwright; A/B test of two slots (even ISO week → 11:00, odd → 17:00, one post/week) |
+
+Scheduling is **launchd** on macOS (plist templates rendered with `$HOME` and loaded by `install.sh`) and **Task Scheduler** on Windows (`register-tasks.ps1`, run by `install.ps1`). The browser auto-post relies on a logged-in Playwright profile and a pre-flight that clears stale profile locks (`brad-browser-prep`); if the browser fails, the job writes a ready-to-post draft to `weekly-stats/TO_POST.md` instead. **Brad's browser automation is tested on macOS only** (see OS table).
+
 ## Permissions & bypass alias
 
 Two layers, so day-to-day use needs no confirmation clicks:
@@ -98,6 +117,8 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
 | Spinner verbs  | yes                | yes                | yes         |
 | Bypass `claude` alias | yes (zsh) | no (add a PowerShell function by hand) | yes (zsh) |
+| Brad — `/brad` + daily/weekly proposals | yes (launchd) | yes (Task Scheduler) | partial (jobs need cron, not provided) |
+| Brad — Monday browser auto-post | yes (Playwright + launchd, tested) | best-effort (PowerShell port, untested) | no |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
 
