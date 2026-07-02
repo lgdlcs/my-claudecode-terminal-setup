@@ -86,6 +86,17 @@ Three scheduled jobs (background):
 
 Scheduling is **launchd** on macOS (plist templates rendered with `$HOME` and loaded by `install.sh`) and **Task Scheduler** on Windows (`register-tasks.ps1`, run by `install.ps1`). The browser auto-post relies on a logged-in Playwright profile and a pre-flight that clears stale profile locks (`brad-browser-prep`); if the browser fails, the job writes a ready-to-post draft to `weekly-stats/TO_POST.md` instead. **Brad's browser automation is tested on macOS only** (see OS table).
 
+## Clara — the Reddit social-listening agent
+
+**Clara** is a Claude Code subagent that watches Reddit for fresh threads where a human, value-first reply about the owner's products (v1: **Pronolino**, a baby-prediction game) would be relevant. She scores each thread honestly (0–100: purchase intent / active ask + freshness + product fit), writes a dated digest with a **ready-to-post reply draft** for anything ≥ 70 (each draft carries a "Pourquoi" and a "Succès =" line), and **never posts anything herself** — the owner posts by hand.
+
+- **Invoke** with `/clara` (no arg → full standard watch; arg → targeted query), or just by mentioning *social listening / veille / Reddit monitoring* (the subagent auto-triggers on its description).
+- **Installed files:** `agents/clara.md` (subagent, with the full monitoring method), `commands/clara.md` (`/clara`), and `clara/config.json` (products / subreddits / keywords seed) → `~/.claude/agents/`, `~/.claude/commands/`, `~/.claude/clara/`.
+- **Local state (never versioned, never overwritten):** `~/.claude/clara/seen.json` (dedup map, seeded `{}`) and `~/.claude/clara/digests/` (one Markdown digest per run). The installer also never overwrites an existing `config.json`.
+- **Edit her scope** in `~/.claude/clara/config.json` (products, subreddits, keywords per language).
+- **Kill switch:** `touch ~/.claude/clara/PAUSED` — Clara checks it before every run.
+- **No scheduled jobs, no browser:** collection is plain `curl` against Reddit's public feeds. As of mid-2026 the `.json` endpoints are bot-blocked (403); the verified fallback is the **`.rss` Atom feeds** (`r/<sub>/new.rss`, `search.rss`), documented with rate-limit guidance in `agents/clara.md`. `curl` ships natively with **Windows 10 1803+** as well as macOS/Linux, so the watch runs the same on every OS.
+
 ## Permissions & bypass alias
 
 Two layers, so day-to-day use needs no confirmation clicks:
@@ -119,6 +130,7 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | Bypass `claude` alias | yes (zsh) | no (add a PowerShell function by hand) | yes (zsh) |
 | Brad — `/brad` + daily/weekly proposals | yes (launchd) | yes (Task Scheduler) | partial (jobs need cron, not provided) |
 | Brad — Monday browser auto-post | yes (Playwright + launchd, tested) | best-effort (PowerShell port, untested) | no |
+| Clara — `/clara` Reddit watch + digests | yes (tested) | yes (`curl` is native since Windows 10 1803) | yes |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
 

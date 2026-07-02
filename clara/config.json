@@ -1,0 +1,25 @@
+{
+  "products": [
+    {
+      "id": "pronolino",
+      "name": "Pronolino",
+      "url": "https://pronolino.com",
+      "pitch": "Free baby prediction game: friends & family guess the baby's birth date, weight and height on a shared wall of characters. Self-serve, works for virtual showers. Freemium 4.99 EUR.",
+      "subreddits": ["babyshower", "BabyBumps", "partyplanning"],
+      "keywords": {
+        "en": [
+          "baby shower game",
+          "baby shower games",
+          "baby pool",
+          "guess the baby",
+          "baby prediction game",
+          "virtual baby shower"
+        ],
+        "fr": [
+          "pronostic naissance",
+          "jeu baby shower"
+        ]
+      }
+    }
+  ]
+}
