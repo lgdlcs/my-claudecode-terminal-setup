@@ -22,13 +22,13 @@
 - Ne jamais coller une URL brute dans un email envoyé via Gmail.
 - Toujours embarquer le lien dans un texte d'ancrage (lien hypertexte HTML), ex. `<a href="https://…">votre maquette</a>` pour « votre maquette ».
 - Envoyer ces emails en HTML (et non en texte brut) pour que le lien cliquable soit rendu correctement.
+- Ne pas utiliser de tirets cadratins (—) dans les emails (corps ni signature) : ça fait artificiel/signature IA. Remplacer par une virgule, un point ou un retour à la ligne. Signature « — Lucas » → « Lucas » sur une nouvelle ligne.
 
-## gstack
-- Pour toute navigation web, utiliser le skill `/browse` de gstack. Ne jamais utiliser les outils `mcp__claude-in-chrome__*`.
-- Skills gstack disponibles : `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/setup-gbrain`, `/retro`, `/investigate`, `/document-release`, `/document-generate`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.
+## Navigation web
+- gstack a été désinstallé (juillet 2026). Pour toute navigation/automatisation web, utiliser les outils **Playwright MCP** (`mcp__playwright__*`). Ne jamais utiliser les outils `mcp__claude-in-chrome__*`.
 
 ## Bibles & principes (docs de référence à la racine de ~/.claude/)
-- **Landing pages / produit viral** : dès qu'on conçoit ou révise une landing page (sites vitrines, démos, ComplaintScout, etc.), appliquer la bible `~/.claude/landing-page-bible.md` (32 Principles of a Viral Product, Marc Lou). En cas de conflit, la règle gagne sauf arbitrage explicite.
+- **Landing pages / produit viral** : dès qu'on conçoit ou révise une landing page (sites vitrines, démos, etc.), appliquer la bible `~/.claude/landing-page-bible.md` (32 Principles of a Viral Product, Marc Lou). En cas de conflit, la règle gagne sauf arbitrage explicite.
 - **Business / SaaS / monétisation** : dès qu'on entame un sujet business, SaaS ou monétisation, raisonner avec `~/.claude/startup-principles.md` (15 règles fondateur, Y Combinator).
 
 ## Reminders / rappels
