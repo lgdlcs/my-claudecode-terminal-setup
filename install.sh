@@ -93,24 +93,6 @@ if [[ -d "$REPO_DIR/twitter-agent" ]]; then
   fi
 fi
 
-# --- Clara (agent de veille Reddit) : dossier d'état + config seed ---
-if [[ -d "$REPO_DIR/clara" ]]; then
-  CL="$CLAUDE_DIR/clara"
-  mkdir -p "$CL/digests"
-  # Config seed — ne PAS écraser une config existante (produits/subs/mots-clés réglés localement).
-  if [[ ! -f "$CL/config.json" ]]; then
-    cp "$REPO_DIR/clara/config.json" "$CL/config.json"
-    echo "Installed: $CL/config.json"
-  else
-    echo "Kept existing: $CL/config.json"
-  fi
-  # État anti-doublons (local, jamais versionné, jamais écrasé).
-  if [[ ! -f "$CL/seen.json" ]]; then
-    printf '{}\n' > "$CL/seen.json"
-    echo "Installed: $CL/seen.json"
-  fi
-fi
-
 # --- CLAUDE.md (global instructions; backed up, not chmod'd) ---
 if [[ -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
   cp "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.$TS"

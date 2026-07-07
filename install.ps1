@@ -88,25 +88,6 @@ if (Test-Path $TaRepo) {
     }
 }
 
-# --- Clara (agent de veille Reddit) : dossier d'état + config seed ---
-$ClRepo = Join-Path $RepoDir "clara"
-if (Test-Path $ClRepo) {
-    $Cl = Join-Path $ClaudeDir "clara"
-    New-Item -ItemType Directory -Force -Path (Join-Path $Cl "digests") | Out-Null
-    # Config seed — ne PAS écraser une config existante (produits/subs/mots-clés réglés localement).
-    $ClCfg = Join-Path $Cl "config.json"
-    if (-not (Test-Path $ClCfg)) {
-        Copy-Item (Join-Path $ClRepo "config.json") $ClCfg -Force
-        Write-Host "Installed: $ClCfg"
-    } else { Write-Host "Kept existing: $ClCfg" }
-    # État anti-doublons (local, jamais versionné, jamais écrasé).
-    $ClSeen = Join-Path $Cl "seen.json"
-    if (-not (Test-Path $ClSeen)) {
-        Set-Content -Path $ClSeen -Value "{}" -Encoding UTF8
-        Write-Host "Installed: $ClSeen"
-    }
-}
-
 # --- CLAUDE.md (global instructions; backed up) ---
 $ClaudeMd = Join-Path $ClaudeDir "CLAUDE.md"
 if (Test-Path $ClaudeMd) {
