@@ -82,6 +82,15 @@ if [[ -d "$REPO_DIR/twitter-agent" ]]; then
   if [[ "$(uname)" == "Darwin" ]]; then
     LA="$HOME/Library/LaunchAgents"
     mkdir -p "$LA"
+    # Auto-post X de Brad désactivé (2026-07-21, décision du propriétaire) : Brad ne fait que
+    # des drafts, le propriétaire poste à la main. On retire le job auto-post s'il traîne encore.
+    for stale in com.alttab.brad-monday-post com.alttab.brad-week-batch; do
+      if [[ -f "$LA/$stale.plist" ]]; then
+        launchctl unload "$LA/$stale.plist" 2>/dev/null || true
+        rm -f "$LA/$stale.plist"
+        echo "Removed (auto-post disabled): $LA/$stale.plist"
+      fi
+    done
     for tmpl in "$REPO_DIR"/twitter-agent/macos/*.plist.tmpl; do
       [[ -e "$tmpl" ]] || continue
       label=$(basename "$tmpl" .plist.tmpl)

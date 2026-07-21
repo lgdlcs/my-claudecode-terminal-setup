@@ -17,7 +17,8 @@ Register-BradTask "Brad - Daily proposals" "brad-daily.ps1" @(
 Register-BradTask "Brad - Weekly recap" "brad-weekly.ps1" @(
     New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 6:00pm
 )
-Register-BradTask "Brad - Monday post" "brad-monday-post.ps1" @(
-    (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 11:00am),
-    (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 5:00pm)
-)
+
+# Brad's automatic X posting is disabled (2026-07-21, owner's decision): Brad only drafts,
+# the owner posts by hand. The former "Brad - Monday post" auto-poster is removed. If it was
+# registered by a previous install, remove it with:
+#   Unregister-ScheduledTask -TaskName "Brad - Monday post" -Confirm:$false
