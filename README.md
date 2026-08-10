@@ -54,6 +54,16 @@ Each concurrent Claude session is tinted a different color from a 6-color dark p
 
 State lives in `~/.claude/session-colors/`; dead sessions are pruned automatically. With more than 6 simultaneous sessions, colors are reused round-robin.
 
+### /couleur — pick the color yourself
+
+`/couleur <color>` overrides the automatic tint for the current session's tab (macOS / Terminal.app only, via `~/.claude/terminal-color.sh`).
+
+- Names: `bleu` `teal` `vert` `violet` `rouge` `ambre` `rose` `gris` `noir` `blanc` (English aliases work too)
+- Any hex: `/couleur #1F3656`
+- `/couleur random` for a surprise; `/couleur` with no argument just lists the palette
+
+It targets the tab by TTY (walking up the process tree until it finds a tty Terminal actually owns, so wrappers that allocate their own pty don't fool it) and adapts the text and cursor color to the background's luminance.
+
 ## /terminaux — N Claude sessions tiled to fill the screen
 
 The `/terminaux` slash command takes a number from **1 to 6** (default 3) and opens that many terminal windows, tiled in a grid so each takes the maximum proportion of the screen (all visible), each running `claude`, then switches every freshly launched session to `/effort max`.
@@ -111,6 +121,7 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | Statusline     | yes                | yes (Python)       | yes         |
 | Plan-usage gauge | yes              | yes (if creds file)| yes         |
 | Per-session color | yes (Terminal.app) | yes (Git Bash wrapper) | skipped  |
+| /couleur (manual tint) | yes (Terminal.app) | no | no |
 | Sound          | `Pop.aiff`         | PowerShell beep    | skipped     |
 | Wordmark       | yes                | yes                | yes         |
 | /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
