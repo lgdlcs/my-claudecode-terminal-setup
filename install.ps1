@@ -61,33 +61,6 @@ Get-ChildItem (Join-Path $RepoDir "scripts") -Filter *.ps1 | ForEach-Object {
     Write-Host "Installed: $(Join-Path $ScriptsDir $_.Name)"
 }
 
-# --- Brad (Twitter/X agent) : config + scripts + tâches planifiées (best-effort, non testé Windows) ---
-$TaRepo = Join-Path $RepoDir "twitter-agent"
-if (Test-Path $TaRepo) {
-    $Ta = Join-Path $ClaudeDir "twitter-agent"
-    New-Item -ItemType Directory -Force -Path (Join-Path $Ta "daily-proposals") | Out-Null
-    New-Item -ItemType Directory -Force -Path (Join-Path $Ta "weekly-stats") | Out-Null
-    # Config seeds — ne PAS écraser les réglages/données existants.
-    foreach ($f in @("context.md","strategy.md","log.md","needs-lucas.md")) {
-        $dest = Join-Path $Ta $f
-        if (-not (Test-Path $dest)) {
-            Copy-Item (Join-Path $TaRepo $f) $dest -Force
-            Write-Host "Installed: $dest"
-        } else { Write-Host "Kept existing: $dest" }
-    }
-    # Scripts Windows (code — toujours mis à jour).
-    Get-ChildItem (Join-Path $TaRepo "windows") -Filter *.ps1 | ForEach-Object {
-        Copy-Item $_.FullName $Ta -Force
-        Write-Host "Installed: $(Join-Path $Ta $_.Name)"
-    }
-    # Tâches planifiées (Task Scheduler).
-    try {
-        & powershell -ExecutionPolicy Bypass -File (Join-Path $Ta "register-tasks.ps1")
-    } catch {
-        Write-Host "Note: enregistrement des tâches Brad ignoré ($($_.Exception.Message))."
-    }
-}
-
 # --- CLAUDE.md (global instructions; backed up) ---
 $ClaudeMd = Join-Path $ClaudeDir "CLAUDE.md"
 if (Test-Path $ClaudeMd) {

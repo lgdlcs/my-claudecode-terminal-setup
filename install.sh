@@ -56,52 +56,6 @@ if [[ "$(uname)" == "Darwin" && -d "$REPO_DIR/scripts" ]]; then
   done
 fi
 
-# --- Brad (Twitter/X agent) : config + scripts + scheduled jobs ---
-if [[ -d "$REPO_DIR/twitter-agent" ]]; then
-  TA="$CLAUDE_DIR/twitter-agent"
-  mkdir -p "$TA/daily-proposals" "$TA/weekly-stats"
-  # Config seeds — ne PAS écraser les réglages/données existants (voix, stratégie, journal).
-  for f in context.md strategy.md log.md needs-lucas.md; do
-    if [[ ! -f "$TA/$f" ]]; then
-      cp "$REPO_DIR/twitter-agent/$f" "$TA/$f"
-      echo "Installed: $TA/$f"
-    else
-      echo "Kept existing: $TA/$f"
-    fi
-  done
-  # Scripts macOS (code — toujours mis à jour).
-  if [[ -d "$REPO_DIR/twitter-agent/macos" ]]; then
-    for f in "$REPO_DIR"/twitter-agent/macos/*.command "$REPO_DIR"/twitter-agent/macos/*.sh; do
-      [[ -e "$f" ]] || continue
-      cp "$f" "$TA/"
-      chmod +x "$TA/$(basename "$f")"
-      echo "Installed: $TA/$(basename "$f")"
-    done
-  fi
-  # Jobs launchd (macOS uniquement) : rendre les plists avec $HOME + (re)charger.
-  if [[ "$(uname)" == "Darwin" ]]; then
-    LA="$HOME/Library/LaunchAgents"
-    mkdir -p "$LA"
-    # Auto-post X de Brad désactivé (2026-07-21, décision du propriétaire) : Brad ne fait que
-    # des drafts, le propriétaire poste à la main. On retire le job auto-post s'il traîne encore.
-    for stale in com.alttab.brad-monday-post com.alttab.brad-week-batch; do
-      if [[ -f "$LA/$stale.plist" ]]; then
-        launchctl unload "$LA/$stale.plist" 2>/dev/null || true
-        rm -f "$LA/$stale.plist"
-        echo "Removed (auto-post disabled): $LA/$stale.plist"
-      fi
-    done
-    for tmpl in "$REPO_DIR"/twitter-agent/macos/*.plist.tmpl; do
-      [[ -e "$tmpl" ]] || continue
-      label=$(basename "$tmpl" .plist.tmpl)
-      sed "s|__HOME__|$HOME|g" "$tmpl" > "$LA/$label.plist"
-      launchctl unload "$LA/$label.plist" 2>/dev/null || true
-      launchctl load -w "$LA/$label.plist" 2>/dev/null || true
-      echo "Installed + loaded: $LA/$label.plist"
-    done
-  fi
-fi
-
 # --- CLAUDE.md (global instructions; backed up, not chmod'd) ---
 if [[ -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
   cp "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.bak.$TS"
