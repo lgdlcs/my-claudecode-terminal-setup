@@ -53,6 +53,16 @@ if (Test-Path (Join-Path $RepoDir "agents")) {
     }
 }
 
+# --- Hooks (~\.claude\hooks\) ---
+if (Test-Path (Join-Path $RepoDir "hooks")) {
+    $HooksDir = Join-Path $ClaudeDir "hooks"
+    New-Item -ItemType Directory -Force -Path $HooksDir | Out-Null
+    Get-ChildItem (Join-Path $RepoDir "hooks") -File | ForEach-Object {
+        Copy-Item $_.FullName $HooksDir -Force
+        Write-Host "Installed: $(Join-Path $HooksDir $_.Name)"
+    }
+}
+
 # --- PowerShell scripts (~\.claude\scripts\ ; used by /terminaux) ---
 $ScriptsDir = Join-Path $ClaudeDir "scripts"
 New-Item -ItemType Directory -Force -Path $ScriptsDir | Out-Null

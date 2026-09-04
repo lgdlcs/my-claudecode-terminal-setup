@@ -47,6 +47,16 @@ if [[ -d "$REPO_DIR/agents" ]]; then
   done
 fi
 
+# --- Hooks (~/.claude/hooks/) ---
+if [[ -d "$REPO_DIR/hooks" ]]; then
+  mkdir -p "$CLAUDE_DIR/hooks"
+  for f in "$REPO_DIR"/hooks/*; do
+    cp "$f" "$CLAUDE_DIR/hooks/"
+    chmod +x "$CLAUDE_DIR/hooks/$(basename "$f")"
+    echo "Installed: $CLAUDE_DIR/hooks/$(basename "$f")"
+  done
+fi
+
 # --- AppleScripts (macOS only; used by /terminaux) ---
 if [[ "$(uname)" == "Darwin" && -d "$REPO_DIR/scripts" ]]; then
   mkdir -p "$HOME/Library/Scripts"
