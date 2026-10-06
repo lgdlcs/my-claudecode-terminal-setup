@@ -1,0 +1,18 @@
+{
+  "model": "opus[1m]",
+  "extraKnownMarketplaces": {
+    "local": {
+      "source": {
+        "source": "directory",
+        "path": "__HOME__/.claude/local-plugins"
+      }
+    }
+  },
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "enabledPlugins": {
+    "pstack@local": true
+  }
+}

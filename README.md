@@ -125,6 +125,26 @@ ANSI colors need a VT-capable terminal — Windows Terminal works out of the box
 | Different macOS sound | swap `Pop.aiff` for `Tink.aiff`, `Glass.aiff`, … (in `/System/Library/Sounds/`) |
 | Different beep on Windows | change `880,80` (`Hz,ms`) in the Stop hook |
 
+## Linux / Omarchy machine (herdr)
+
+`linux-omarchy/` holds the full config of my Omarchy (Arch + Hyprland) machine, installed separately:
+
+```bash
+./linux-omarchy/install.sh
+```
+
+| What | File | Goes to |
+|---|---|---|
+| Claude Code settings (model, fullscreen TUI, pstack enabled) | `claude/settings.json` | merged into `~/.claude/settings.json` |
+| Omarchy color theme for Claude Code | `claude/themes/omarchy.json` | `~/.claude/themes/` |
+| User-scope MCP servers (Mobbin) | `claude/mcp-servers.json` | `claude mcp add --scope user` |
+| pstack plugin (cloned from `cursor/plugins`) + Claude Code manifests | `claude/local-plugins/` | `~/.claude/local-plugins/` |
+| herdr config (tmux-style keys, `ctrl+space` prefix) | `herdr/config.toml` | `~/.config/herdr/` |
+| **Super+F2** opens herdr in a terminal (same app-id as Claude Code) | `hypr/bindings-herdr.lua` | `~/.config/hypr/bindings.lua` |
+| `claude` = `claude --dangerously-skip-permissions`, **only inside herdr** (`HERDR_ENV=1`) | `shell/herdr-claude.bash` | `~/.bashrc` |
+
+The `omarchy` and `diagnose-crash` skills ship with Omarchy itself (`/usr/share/omarchy/default/agents/skills`), so they aren't copied here. Credentials, history and memory stay on the machine.
+
 ## Uninstall
 
 ```bash

@@ -1,0 +1,7 @@
+{
+  "name": "local",
+  "owner": { "name": "lgdlcs" },
+  "plugins": [
+    { "name": "pstack", "source": "./pstack", "description": "pstack (port local du plugin Cursor cursor/plugins/pstack)" }
+  ]
+}
