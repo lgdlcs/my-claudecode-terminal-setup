@@ -1,6 +1,9 @@
 {
-  "model": "opus",
+  "model": "opus[1m]",
+  "tui": "fullscreen",
+  "theme": "dark",
   "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
   "agentPushNotifEnabled": true,
   "permissions": {
     "allow": [
@@ -85,5 +88,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "local": {
+      "source": {
+        "source": "directory",
+        "path": "~/.claude/local-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "pstack@local": true
   }
 }

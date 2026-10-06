@@ -48,6 +48,11 @@ def main():
 
     merged = deep_merge(user_settings, repo_settings)
 
+    # Le marketplace local (pstack) veut un chemin absolu : pas d'expansion ~
+    local = merged.get("extraKnownMarketplaces", {}).get("local", {}).get("source")
+    if local:
+        local["path"] = str(CLAUDE_DIR / "local-plugins")
+
     script = CLAUDE_DIR / "statusline.py"
     merged.setdefault("statusLine", {})
     merged["statusLine"]["type"] = "command"

@@ -109,6 +109,8 @@ Two layers, so day-to-day use needs no confirmation clicks:
 | /terminaux (3× claude tiled) | yes (Terminal.app) | yes (wt / PowerShell) | no |
 | Spinner verbs  | yes                | yes                | yes         |
 | Bypass `claude` alias | yes (zsh) | no (add a PowerShell function by hand) | yes (zsh) |
+| herdr + `hr` remote attach | yes | yes (PowerShell) | yes |
+| pstack plugin + MCP servers | yes | yes | yes |
 
 ANSI colors need a VT-capable terminal — Windows Terminal works out of the box. The `SessionStart`/`Stop` hooks are still shell snippets and no-op silently where they don't apply.
 
@@ -125,25 +127,48 @@ ANSI colors need a VT-capable terminal — Windows Terminal works out of the box
 | Different macOS sound | swap `Pop.aiff` for `Tink.aiff`, `Glass.aiff`, … (in `/System/Library/Sounds/`) |
 | Different beep on Windows | change `880,80` (`Hz,ms`) in the Stop hook |
 
-## Linux / Omarchy machine (herdr)
+## herdr — same workspace on every machine
 
-`linux-omarchy/` holds the full config of my Omarchy (Arch + Hyprland) machine, installed separately:
+[herdr](https://herdr.dev) is a terminal workspace manager for AI agents (tmux-like, persistent sessions). Both installers (`install.sh` on macOS/Linux, `install.ps1` on Windows) set it up identically:
+
+- install herdr if it's missing (official installer)
+- copy the shared `herdr/config.toml` (`ctrl+space` prefix, tmux-style keys) to `~/.config/herdr/` (macOS/Linux) or `%APPDATA%\herdr\` (Windows)
+- `herdr integration install claude` so herdr tracks Claude Code's state in its sidebar
+- add the helpers from `herdr/herdr.sh` (bash/zsh) or `herdr/herdr.ps1` (PowerShell profile):
+  - inside herdr, `claude` runs with `--dangerously-skip-permissions`
+  - `hr` to open or attach to herdr
+
+### Pick up your session from any machine
+
+herdr sessions live on the machine that runs them. Other machines attach over SSH and draw the UI locally with **your local keybindings**:
+
+```bash
+hr                    # local herdr session
+hr workbox            # attach to the herdr session running on "workbox" (any ssh host / ~/.ssh/config alias)
+hr workbox agents     # ...its named session "agents"
+```
+
+To make `hr` with no argument always reattach to your main machine, set `HERDR_HOST` on the other machines (`export HERDR_HOST=workbox` in `~/.zshrc`, or `$env:HERDR_HOST = "workbox"` in your PowerShell `$PROFILE`). Leave it unset on the main machine itself.
+
+Requirements: SSH access to the host (key-based; a [Tailscale](https://tailscale.com) network makes it work from anywhere), and the host being Linux/macOS (x86_64 or aarch64) or Windows x86_64. herdr installs itself on the host if needed.
+
+## Shared Claude Code setup
+
+Besides the statusline, hooks and commands above, both installers also:
+
+- set the model (`opus[1m]`), fullscreen TUI and dark theme in `settings.json`
+- install the **pstack** plugin (cloned from `cursor/plugins`, plus the Claude Code manifests in `plugins/local/`) and enable it
+- add the user-scope MCP servers from `mcp-servers.json` (Mobbin)
+
+## Linux / Omarchy extras
+
+On my Omarchy (Arch + Hyprland) machine, after `./install.sh`:
 
 ```bash
 ./linux-omarchy/install.sh
 ```
 
-| What | File | Goes to |
-|---|---|---|
-| Claude Code settings (model, fullscreen TUI, pstack enabled) | `claude/settings.json` | merged into `~/.claude/settings.json` |
-| Omarchy color theme for Claude Code | `claude/themes/omarchy.json` | `~/.claude/themes/` |
-| User-scope MCP servers (Mobbin) | `claude/mcp-servers.json` | `claude mcp add --scope user` |
-| pstack plugin (cloned from `cursor/plugins`) + Claude Code manifests | `claude/local-plugins/` | `~/.claude/local-plugins/` |
-| herdr config (tmux-style keys, `ctrl+space` prefix) | `herdr/config.toml` | `~/.config/herdr/` |
-| **Super+F2** opens herdr in a terminal (same app-id as Claude Code) | `hypr/bindings-herdr.lua` | `~/.config/hypr/bindings.lua` |
-| `claude` = `claude --dangerously-skip-permissions`, **only inside herdr** (`HERDR_ENV=1`) | `shell/herdr-claude.bash` | `~/.bashrc` |
-
-The `omarchy` and `diagnose-crash` skills ship with Omarchy itself (`/usr/share/omarchy/default/agents/skills`), so they aren't copied here. Credentials, history and memory stay on the machine.
+It adds the Omarchy color theme for Claude Code (`linux-omarchy/themes/omarchy.json`) and binds **Super+F2** to open herdr in a terminal (`linux-omarchy/hypr/bindings-herdr.lua`). The `omarchy` and `diagnose-crash` skills ship with Omarchy itself, so they aren't copied here. Credentials, history and memory never leave the machine.
 
 ## Uninstall
 

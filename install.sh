@@ -84,6 +84,19 @@ for f in landing-page-bible.md startup-principles.md; do
   echo "Installed: $CLAUDE_DIR/$f"
 done
 
+# --- pstack plugin (local marketplace; upstream only ships a Cursor manifest) ---
+if [[ ! -d "$CLAUDE_DIR/local-plugins/pstack/skills" ]]; then
+  tmp=$(mktemp -d)
+  if git clone -q --depth 1 https://github.com/cursor/plugins.git "$tmp"; then
+    mkdir -p "$CLAUDE_DIR/local-plugins"
+    cp -r "$tmp/pstack" "$CLAUDE_DIR/local-plugins/"
+    echo "Installed: $CLAUDE_DIR/local-plugins/pstack"
+  fi
+  rm -rf "$tmp"
+fi
+mkdir -p "$CLAUDE_DIR/local-plugins"
+cp -r "$REPO_DIR/plugins/local/." "$CLAUDE_DIR/local-plugins/"
+
 # --- settings.json (recursive merge + OS-specific statusline command) ---
 "$PY" "$REPO_DIR/apply-settings.py" "$PY"
 
@@ -99,6 +112,36 @@ if [[ -f "$RC" ]] && ! grep -q "alias claude=" "$RC" 2>/dev/null; then
   } >> "$RC"
   echo "Installed: alias claude -> $RC"
 fi
+
+# --- User-scope MCP servers ---
+if command -v claude >/dev/null 2>&1; then
+  "$PY" -c "import json,sys;[print(n,s['type'],s['url']) for n,s in json.load(open(sys.argv[1]))['mcpServers'].items()]" "$REPO_DIR/mcp-servers.json" |
+  while read -r name type url; do
+    claude mcp add --scope user --transport "$type" "$name" "$url" >/dev/null 2>&1 && echo "MCP added: $name" || echo "MCP present: $name"
+  done
+fi
+
+# --- herdr: binary, shared config, Claude Code integration, shell helpers ---
+if ! command -v herdr >/dev/null 2>&1; then
+  curl -fsSL https://herdr.dev/install.sh | sh || echo "herdr install failed — see https://herdr.dev"
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+HERDR_CFG="${HERDR_CONFIG_PATH:-$HOME/.config/herdr/config.toml}"
+mkdir -p "$(dirname "$HERDR_CFG")"
+if [[ -f "$HERDR_CFG" ]]; then
+  cp "$HERDR_CFG" "$HERDR_CFG.bak.$TS"
+  echo "Backed up: $HERDR_CFG -> $HERDR_CFG.bak.$TS"
+fi
+cp "$REPO_DIR/herdr/config.toml" "$HERDR_CFG"
+echo "Installed: $HERDR_CFG"
+command -v herdr >/dev/null 2>&1 && herdr integration install claude >/dev/null 2>&1 && echo "herdr: Claude Code integration installed"
+cp "$REPO_DIR/herdr/herdr.sh" "$CLAUDE_DIR/herdr.sh"
+for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+  if [[ -f "$rc" ]] && ! grep -q '.claude/herdr.sh' "$rc"; then
+    printf '\n# herdr : alias claude (bypass) dans herdr + commande hr\n[ -f "$HOME/.claude/herdr.sh" ] && . "$HOME/.claude/herdr.sh"\n' >> "$rc"
+    echo "Installed: herdr helpers -> $rc"
+  fi
+done
 
 echo ""
 echo "Done. Open a new Claude Code session to see the changes."

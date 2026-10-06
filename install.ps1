@@ -91,8 +91,56 @@ foreach ($f in @("landing-page-bible.md", "startup-principles.md")) {
     Write-Host "Installed: $dest"
 }
 
+# --- pstack plugin (local marketplace; upstream only ships a Cursor manifest) ---
+$LocalPlugins = Join-Path $ClaudeDir "local-plugins"
+New-Item -ItemType Directory -Force -Path $LocalPlugins | Out-Null
+if (-not (Test-Path (Join-Path $LocalPlugins "pstack\skills"))) {
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) "cursor-plugins-$Ts"
+    git clone -q --depth 1 https://github.com/cursor/plugins.git $tmp
+    if ($LASTEXITCODE -eq 0) {
+        Copy-Item (Join-Path $tmp "pstack") $LocalPlugins -Recurse -Force
+        Write-Host "Installed: $(Join-Path $LocalPlugins 'pstack')"
+    }
+    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+}
+Copy-Item (Join-Path $RepoDir "plugins\local\*") $LocalPlugins -Recurse -Force
+
 # --- settings.json (recursive merge + Windows statusline command) ---
 & $Py (Join-Path $RepoDir "apply-settings.py") $Py
+
+# --- User-scope MCP servers ---
+if (Get-Command claude -ErrorAction SilentlyContinue) {
+    $mcp = Get-Content (Join-Path $RepoDir "mcp-servers.json") -Raw | ConvertFrom-Json
+    foreach ($s in $mcp.mcpServers.PSObject.Properties) {
+        try { claude mcp add --scope user --transport $s.Value.type $s.Name $s.Value.url 2>&1 | Out-Null } catch {}
+        if ($LASTEXITCODE -eq 0) { Write-Host "MCP added: $($s.Name)" } else { Write-Host "MCP present: $($s.Name)" }
+    }
+}
+
+# --- herdr: binary, shared config, Claude Code integration, PowerShell helpers ---
+if (-not (Get-Command herdr -ErrorAction SilentlyContinue)) {
+    try { Invoke-RestMethod https://herdr.dev/install.ps1 | Invoke-Expression }
+    catch { Write-Host "herdr install failed - see https://herdr.dev" }
+    $env:PATH = "$env:LOCALAPPDATA\Programs\Herdr\bin;$env:PATH"
+}
+$HerdrCfg = if ($env:HERDR_CONFIG_PATH) { $env:HERDR_CONFIG_PATH } else { Join-Path $env:APPDATA "herdr\config.toml" }
+New-Item -ItemType Directory -Force -Path (Split-Path $HerdrCfg) | Out-Null
+if (Test-Path $HerdrCfg) {
+    Copy-Item $HerdrCfg "$HerdrCfg.bak.$Ts"
+    Write-Host "Backed up: $HerdrCfg -> $HerdrCfg.bak.$Ts"
+}
+Copy-Item (Join-Path $RepoDir "herdr\config.toml") $HerdrCfg -Force
+Write-Host "Installed: $HerdrCfg"
+if (Get-Command herdr -ErrorAction SilentlyContinue) {
+    try { herdr integration install claude 2>&1 | Out-Null } catch {}
+    if ($LASTEXITCODE -eq 0) { Write-Host "herdr: Claude Code integration installed" }
+}
+Copy-Item (Join-Path $RepoDir "herdr\herdr.ps1") (Join-Path $ClaudeDir "herdr.ps1") -Force
+if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Force -Path $PROFILE | Out-Null }
+if (-not (Select-String -Path $PROFILE -Pattern '\.claude\\herdr\.ps1' -Quiet)) {
+    Add-Content $PROFILE "`n# herdr : alias claude (bypass) dans herdr + commande hr`n. `"`$env:USERPROFILE\.claude\herdr.ps1`""
+    Write-Host "Installed: herdr helpers -> $PROFILE"
+}
 
 Write-Host ""
 Write-Host "Done. Open a new Claude Code session to see the changes."

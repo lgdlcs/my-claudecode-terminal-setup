@@ -1,5 +1,5 @@
-# Mirrors the Omarchy tmux config in config/tmux/tmux.conf
-# tmux session -> herdr workspace, tmux window -> herdr tab, tmux pane -> herdr pane
+# herdr config, shared by every machine (Linux, macOS, Windows).
+# Keys mirror the Omarchy tmux config: tmux session -> herdr workspace, window -> tab, pane -> pane
 
 [theme]
 # tmux ran on the terminal's own palette (bg=default, fg=default, ANSI blue accents)
